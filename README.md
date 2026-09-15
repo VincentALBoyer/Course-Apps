@@ -10,6 +10,7 @@ A collection of Streamlit-based teaching simulations and minigames for operation
 - **[GA_WordGame_App](GA_WordGame_App)**: Hands-on Genetic Algorithm minigame — hand-run selection, crossover, and mutation to evolve a hidden word. See its own [README](GA_WordGame_App/README.md) for details.
 - **[TabuSearch_GridGame_App](TabuSearch_GridGame_App)**: Tabu Search minigame — build a max-sum path on a grid, then improve it with swap moves, tabu tenure, and aspiration, watching how tenure=0 cycles and how auto-play escapes local optima. See its own [README](TabuSearch_GridGame_App/README.md) for details.
 - **[EGEL-Area2](EGEL-Area2)**: "Mega-Factory: Lockdown" — an escape-room-style review game (in Spanish) for EGEL-IINDU exam preparation.
+- **[Kids_MathWriting_App](Kids_MathWriting_App)**: "Aventura Mágica: Números y Letras" — a colorful, mascot-guided game (in Spanish) for young kids to practice addition, multiplication as equal groups, and Spanish spelling. See its own [README](Kids_MathWriting_App/README.md) for details.
 
 Older/retired apps (CRM, SRM, ERP_Sim, Project Scheduling, etc.) live under [Archive](Archive) and are not actively maintained.
 
@@ -27,6 +28,7 @@ streamlit run ExhaustiveVsLocalSearch_App/app.py
 streamlit run GA_WordGame_App/app.py
 streamlit run TabuSearch_GridGame_App/app.py
 streamlit run EGEL-Area2/streamlit_app.py
+streamlit run Kids_MathWriting_App/app.py
 ```
 
 ## License
