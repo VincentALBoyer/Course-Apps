@@ -1,14 +1,15 @@
-# Publishes Greedy_BinPacking_HTML/ (and nothing else from this repo) to
-# GitHub Pages. One-time setup: repo Settings → Pages → Build and deployment
-# → Source: "GitHub Actions".
-name: Deploy bin packing (HTML) to GitHub Pages
+# Publishes website/ (and nothing else from this repo) to GitHub Pages:
+# the home page at the root, each minigame in its own folder.
+# One-time setup: repo Settings → Pages → Build and deployment → Source:
+# "GitHub Actions".
+name: Deploy minigames website to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - "Greedy_BinPacking_HTML/**"
-      - ".github/workflows/pages-binpacking.yml"
+      - "website/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,15 +30,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          sparse-checkout: Greedy_BinPacking_HTML
+          sparse-checkout: website
       # Pages lets browsers cache files for 10 minutes. Stamping the commit
       # into every asset URL makes a freshly loaded page always fetch the
       # scripts and styles from the same deploy as itself.
       - name: Version asset URLs
-        run: sed -i "s/?v=dev/?v=${GITHUB_SHA::8}/g" Greedy_BinPacking_HTML/index.html
+        run: find website -name index.html -exec sed -i "s/?v=dev/?v=${GITHUB_SHA::8}/g" {} +
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: Greedy_BinPacking_HTML
+          path: website
       - id: deployment
         uses: actions/deploy-pages@v4

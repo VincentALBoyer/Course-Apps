@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GA Word Game</title>
+  <meta name="description" content="Find a hidden word by running a genetic algorithm by hand: selection, crossover, mutation and survivor selection." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>" />
+  <script>
+    try {
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="../shared/base.css?v=dev" />
+  <link rel="stylesheet" href="css/style.css?v=dev" />
+  <script defer src="../shared/vendor/plotly-basic.min.js?v=dev"></script>
+  <script defer src="../shared/sha256.js?v=dev"></script>
+  <script defer src="../shared/rng.js?v=dev"></script>
+  <script defer src="../shared/ui.js?v=dev"></script>
+  <script defer src="js/logic.js?v=dev"></script>
+  <script defer src="js/app.js?v=dev"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="home-link" href="../">← All games</a>
+      <span class="brand">🧬 GA Word Game</span>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
+    </div>
+  </header>
+
+  <main class="with-aside">
+    <div>
+      <!-- ─────────────────────────── Setup ─────────────────────────── -->
+      <section id="phase-setup">
+        <h1>🧬 GA Word Game</h1>
+        <p class="subtitle">A hands-on Genetic Algorithm minigame for IN2041 - Metaheuristics</p>
+        <div class="prose">
+          <p>Enter a secret word below. You'll then run a tiny genetic algorithm <strong>by hand</strong>: pick
+          parents, choose where to cut for crossover, and decide which gene to mutate, evolving
+          a population of random words until one matches. Fitness alone is your feedback - no
+          other hints are given, just like the in-class activity.</p>
+        </div>
+        <label class="field"><span>Hidden word (kept secret - shown as dots)</span>
+          <input type="password" id="hidden-word" maxlength="8" autocomplete="off" /></label>
+        <p class="caption">Letters only, 4-8 letters (e.g. PLANET).</p>
+        <fieldset class="segmented">
+          <legend>Population size (kept even for clean parent pairing)</legend>
+          <label><input type="radio" name="pop" value="4" /> 4</label>
+          <label><input type="radio" name="pop" value="6" checked /> 6</label>
+          <label><input type="radio" name="pop" value="8" /> 8</label>
+        </fieldset>
+        <fieldset class="segmented">
+          <legend>Scoring method</legend>
+          <label><input type="radio" name="scoring" value="exact" checked /> Exact match (classic)</label>
+          <label><input type="radio" name="scoring" value="partial" /> Partial credit (alphabet distance)</label>
+        </fieldset>
+        <p class="caption"><strong>Exact match</strong>: 1 point only for a letter in the exact right spot - the classic
+          version, where a near-miss word can score 0. <strong>Partial credit</strong>: wrong letters still earn a
+          fractional point based on how close they are alphabetically to the correct letter (e.g. guessing
+          S for R is close; guessing Z for A is not) - a smoother fitness landscape for the GA to climb.</p>
+        <label class="field"><span>Random seed / class code (optional)</span>
+          <input type="text" id="code" placeholder="Leave blank for a random start population" autocomplete="off" /></label>
+        <p class="caption">Use the same code as a classmate to start from the exact same random population.</p>
+        <div id="setup-error" class="alert error" hidden></div>
+        <button id="start" class="btn primary">▶ Start Game</button>
+      </section>
+
+      <!-- ──────────────────── Breeding / Selection ─────────────────── -->
+      <section id="phase-play" hidden>
+        <h2 id="gen-title"></h2>
+        <p class="caption" id="gen-scoring"></p>
+        <div class="metrics">
+          <div><div class="metric-label">Population size</div><div class="metric-value" id="m-pop"></div></div>
+          <div><div class="metric-label">Target fitness</div><div class="metric-value" id="m-target"></div></div>
+          <div><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed"></div></div>
+        </div>
+        <hr class="divider" />
+        <div id="play-body"></div>
+      </section>
+
+      <!-- ────────────────────────── Finished ───────────────────────── -->
+      <section id="phase-finished" hidden>
+        <div id="fin-alert"></div>
+        <div class="metrics" id="fin-metrics"></div>
+        <p class="caption" id="fin-scoring"></p>
+        <div id="fitness-chart" class="chart"></div>
+        <div class="table-wrap"><table id="history-table"></table></div>
+        <div class="row">
+          <button id="play-again" class="btn">🔁 Play Again (same word)</button>
+          <button id="new-game" class="btn">🆕 New Game</button>
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <div class="panel" id="status-panel" hidden>
+        <div class="metric-label">Best fitness so far</div>
+        <div class="metric-value" id="side-best"></div>
+        <button id="side-action" class="btn small block"></button>
+      </div>
+      <div class="panel concepts">
+        <h3>📘 GA Concepts</h3>
+        <p class="caption">Click any topic for a quick explanation.</p>
+        <div id="concepts"></div>
+      </div>
+    </aside>
+  </main>
+  <div id="toast-stack" aria-live="polite"></div>
+  <noscript><p class="alert error">This page needs JavaScript to run.</p></noscript>
+</body>
+</html>

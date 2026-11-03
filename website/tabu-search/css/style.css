@@ -1,0 +1,36 @@
+/* Tabu Search Grid Game — everything else comes from ../shared/base.css. */
+
+.grid-scroll { overflow-x: auto; padding: 2px 0 6px; }
+.tgrid { display: grid; gap: 3px; width: max-content; }
+.tgrid .hdr { color: #888; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; }
+.tgrid .hdr.row { justify-content: flex-end; padding-right: 4px; }
+.cell {
+  width: 40px; height: 36px; border-radius: 0.5rem; font: 600 0.95rem/1 inherit;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); padding: 0;
+}
+button.cell { cursor: pointer; }
+button.cell:hover:not(:disabled) { border-color: #2a78d6; background: var(--surface); }
+button.cell:disabled { opacity: 0.4; cursor: not-allowed; }
+.cell.path { background: #2a78d6; border-color: #2a78d6; color: #fff; }
+button.cell.path:hover:not(:disabled) { background: #1f5fa8; }
+.cell.out { background: #eb6834; border-color: #eb6834; color: #fff; }
+.cell.in { background: #1a9c5e; border-color: #1a9c5e; color: #fff; }
+.cell.target { border: 2px solid #1a9c5e; }
+.cell.picked { outline: 3px solid #eb6834; outline-offset: 1px; }
+@media (max-width: 520px) { .cell { width: 34px; height: 32px; font-size: 0.85rem; } }
+
+.controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0 24px; align-items: end; }
+@media (max-width: 760px) { .controls { grid-template-columns: minmax(0, 1fr); } }
+
+.ts-cols { display: grid; grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.45fr); gap: 24px; align-items: start; }
+@media (max-width: 1100px) { .ts-cols { grid-template-columns: minmax(0, 1fr); } }
+
+.cands { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.cand { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.cand:last-child { border-bottom: 0; }
+.cand.selected { background: var(--info-bg); }
+.cand .move { grid-column: 2; }
+.cand .res { grid-column: 2; color: var(--muted); }
+.cand .act { grid-column: 3; grid-row: 1 / span 2; }
+.tabu-lines { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }

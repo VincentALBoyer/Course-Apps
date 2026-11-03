@@ -14,6 +14,14 @@ A collection of Streamlit-based teaching simulations and minigames for operation
 
 Older/retired apps (CRM, SRM, ERP_Sim, Project Scheduling, etc.) live under [Archive](Archive) and are not actively maintained.
 
+## Website (no install)
+
+Browser versions of the optimization minigames are published on GitHub Pages at
+**https://vincentalboyer.github.io/MyStreamlitApp/**: Greedy Bin Packing, GA Word Game,
+Tabu Search, and Peak and Valley (the web name of Exhaustive vs. Local Search). They run
+entirely in the browser, so a whole class can play at once, and game codes give the
+same games as the Streamlit versions. Source and details are in [website](website).
+
 ## Getting Started
 
 Each app is self-contained; install its `requirements.txt` and run it directly with Streamlit, e.g.:

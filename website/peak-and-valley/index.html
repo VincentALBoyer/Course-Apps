@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peak and Valley</title>
+  <meta name="description" content="Find the lowest point of a hidden landscape with exhaustive, local or greedy search — a minigame on search strategies and their cost." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰️</text></svg>" />
+  <script>
+    try {
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="../shared/base.css?v=dev" />
+  <script defer src="../shared/vendor/plotly-basic.min.js?v=dev"></script>
+  <script defer src="../shared/sha256.js?v=dev"></script>
+  <script defer src="../shared/rng.js?v=dev"></script>
+  <script defer src="../shared/ui.js?v=dev"></script>
+  <script defer src="js/logic.js?v=dev"></script>
+  <script defer src="js/plotting.js?v=dev"></script>
+  <script defer src="js/app.js?v=dev"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="home-link" href="../">← All games</a>
+      <span class="brand">⛰️ Peak and Valley</span>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
+    </div>
+  </header>
+
+  <main class="with-aside">
+    <div>
+      <!-- ─────────────────────────── Intro ─────────────────────────── -->
+      <section id="phase-intro">
+        <h1>⛰️ Peak and Valley</h1>
+        <p class="subtitle">Exhaustive vs. local search — a companion minigame for IN2041 Session 2, Searching Strategies for Optimization</p>
+        <div class="prose">
+          <p>Each round hides a function <strong>f(x)</strong> behind a wall of unrevealed points, and you try
+          to land on the lowest value. The x-axis <strong>grows every round</strong>, just like the
+          combinatorial explosion of solutions we discussed in class. Pick your strategy once
+          below — you'll play <strong>all 5 rounds</strong> with it.</p>
+        </div>
+        <details class="expander">
+          <summary>How scoring works</summary>
+          <ul class="prose">
+            <li><strong>Exhaustive search</strong> evaluates every point, so it always finds the true best value —
+              but it never earns an efficiency bonus. Its score is therefore always a fixed
+              <strong><span id="exhaustive-fixed"></span> points</strong> per round: guaranteed, never impressive.</li>
+            <li><strong>Local search</strong> starts wherever you pick and only moves to a neighbor that's <em>strictly</em>
+              better than where you are. It stops the instant neither neighbor improves — that's a
+              <strong>local optimum</strong>, which may or may not be the <strong>global</strong> one.</li>
+            <li><strong>Greedy</strong> picks one point and commits — a single evaluation, no comparison, no
+              neighborhood at all (think of it as local search with a neighborhood of size 0). It's
+              the cheapest possible strategy, so it can score very high efficiency — but quality is
+              pure luck, with zero guarantee of even a local optimum.</li>
+            <li>Each round's score = 65% <strong>solution quality</strong> (how close your result is to the true best)
+              + 35% <strong>efficiency</strong> (how few points you had to reveal), scaled to 1000. Local search and
+              Greedy can beat exhaustive's fixed score by converging fast — or fall short if they land poorly.</li>
+          </ul>
+        </details>
+
+        <fieldset class="segmented" id="strategy">
+          <legend>Strategy for all 5 rounds</legend>
+          <label><input type="radio" name="strategy" value="exhaustive" checked /> Exhaustive Search</label>
+          <label><input type="radio" name="strategy" value="local" /> Local Search</label>
+          <label><input type="radio" name="strategy" value="greedy" /> Greedy</label>
+        </fieldset>
+        <p class="caption" id="strategy-caption"></p>
+
+        <details class="expander" id="advanced" hidden>
+          <summary>Advanced settings</summary>
+          <fieldset class="segmented">
+            <legend>Neighborhood size (closest neighbors per side)</legend>
+            <label><input type="radio" name="neighborhood" value="1" checked /> 1</label>
+            <label><input type="radio" name="neighborhood" value="2" /> 2</label>
+          </fieldset>
+          <p class="caption">How many candidate points are revealed on each side of your current position. 2 reveals
+            more of the landscape per step (easier to find an improving move) but costs more evaluations,
+            hurting efficiency.</p>
+          <label class="field"><span>Restarts allowed <output id="restarts-out">0</output></span>
+            <input type="range" id="restarts" min="0" max="5" step="1" value="0" /></label>
+          <p class="caption">If you get trapped in a local optimum, restart from a new point instead of ending the
+            round immediately. Your best result across all attempts counts toward quality — but every
+            restart adds to your evaluation cost, hurting efficiency.</p>
+        </details>
+
+        <label class="field"><span>Game code (optional)</span>
+          <input type="text" id="code" maxlength="12" placeholder="Leave blank for a random code" autocomplete="off" /></label>
+        <p class="caption">Use the same code as a classmate to play on identical landscapes.</p>
+        <button id="start" class="btn primary">▶ Start Game</button>
+      </section>
+
+      <!-- ────────────────────────── Playing ────────────────────────── -->
+      <section id="phase-playing" hidden>
+        <h2 id="round-title"></h2>
+        <div class="metrics">
+          <div><div class="metric-label">Strategy</div><div class="metric-value" id="m-strategy"></div></div>
+          <div><div class="metric-label">Score so far</div><div class="metric-value" id="m-score"></div></div>
+          <div><div class="metric-label">Total time</div><div class="metric-value" id="m-time"></div></div>
+        </div>
+        <div class="progress"><div id="progress-bar"></div></div>
+        <hr class="divider" />
+        <div id="live-chart" class="chart"></div>
+        <div id="play-panel"></div>
+      </section>
+
+      <!-- ────────────────────────── Debrief ────────────────────────── -->
+      <section id="phase-debrief" hidden>
+        <h2 id="debrief-title"></h2>
+        <div id="debrief-alert" class="alert"></div>
+        <div id="debrief-chart" class="chart"></div>
+        <div class="metrics" id="debrief-metrics"></div>
+        <p class="caption" id="debrief-time"></p>
+        <button id="next-round" class="btn primary"></button>
+      </section>
+
+      <!-- ─────────────────────────── Final ─────────────────────────── -->
+      <section id="phase-final" hidden>
+        <h1>🏁 Game Complete!</h1>
+        <div class="metrics">
+          <div><div class="metric-label">Total Score</div><div class="metric-value" id="f-score"></div></div>
+          <div><div class="metric-label">Total Time</div><div class="metric-value" id="f-time"></div></div>
+          <div><div class="metric-label">Game Code</div><div class="metric-value" id="f-code"></div></div>
+        </div>
+        <p class="caption">Share this game code with a classmate to compare results on the exact same 5 landscapes.</p>
+        <div class="table-wrap"><table id="final-table"></table></div>
+        <div class="row">
+          <button id="replay-same" class="btn">🔁 Replay Same Code</button>
+          <button id="replay-new" class="btn">🎲 New Random Landscapes</button>
+        </div>
+        <p class="caption">Both replay with the same strategy and settings you just used. Use ↺ Restart to pick different ones.</p>
+      </section>
+    </div>
+
+    <aside>
+      <div class="panel" id="status-panel" hidden>
+        <div class="metric-label">Game code</div>
+        <div class="metric-value" id="side-code"></div>
+        <button id="restart" class="btn small">↺ Restart</button>
+      </div>
+      <div class="panel concepts">
+        <h3>📘 Concepts</h3>
+        <p class="caption">Click any topic for a quick explanation.</p>
+        <div id="concepts"></div>
+      </div>
+    </aside>
+  </main>
+  <div id="toast-stack" aria-live="polite"></div>
+  <noscript><p class="alert error">This page needs JavaScript to run.</p></noscript>
+</body>
+</html>

@@ -11,7 +11,8 @@
  */
 (function () {
   "use strict";
-  const { game: G, excel: X, plotting: P, fmt0 } = BP;
+  const { game: G, excel: X, plotting: P } = BP;
+  const { fmt0 } = MG;
   const N_ROUNDS = 5;
   const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -70,39 +71,11 @@
   }
 
   /** Current text colors from the CSS theme tokens, for Plotly. */
-  function themeColors() {
-    const css = getComputedStyle(document.documentElement);
-    return { text: css.getPropertyValue("--text").trim(), muted: css.getPropertyValue("--muted").trim() };
-  }
+  const themeColors = () => MG.theme.colors();
 
-  // ── light / dark toggle ──────────────────────────────────────────────
-  // Starts from the system setting; an explicit choice is remembered per
-  // browser (applied before first paint by the inline script in <head>).
-  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-  const currentTheme = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
-
-  // The button may be missing if a browser pairs a cached older page with
-  // this script right after a deploy — the rest of the app must still run.
-  const themeBtn = $("theme-toggle");
-
-  function updateThemeToggle() {
-    if (!themeBtn) return;
-    const dark = currentTheme() === "dark";
-    themeBtn.textContent = dark ? "☀️ Light" : "🌙 Dark";
-    themeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    themeBtn.title = themeBtn.getAttribute("aria-label");
-  }
-
-  if (themeBtn) themeBtn.addEventListener("click", () => {
-    const next = currentTheme() === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem("bp-theme", next); } catch (e) { /* storage blocked: still switches */ }
-    updateThemeToggle();
-    rerenderCharts();
-  });
-  systemDark.addEventListener("change", () => { updateThemeToggle(); rerenderCharts(); });
-
-  // Plotly bakes colors into the SVG, so charts are redrawn on theme change.
+  // The light/dark toggle itself lives in ../shared/ui.js. Plotly bakes
+  // colors into the SVG, so charts are redrawn on theme change.
+  MG.theme.onChange(() => rerenderCharts());
   function rerenderCharts() {
     if (game && game.phase === "final") renderFinalChart();
     if (scoring) renderSelectedInstance();
@@ -135,7 +108,7 @@
   }
 
   function startRound(roundIdx) {
-    const rs = G.generateRound(roundIdx, new BP.PyRandom(null));
+    const rs = G.generateRound(roundIdx, new MG.PyRandom(null));
     rs.start_time = Date.now();
     game.round_state = rs;
     $("confirm-infeasible").checked = false;
@@ -424,7 +397,7 @@
   $("s-dl-report").addEventListener("click", () => download(scoringReportText(), "scoring_report.txt", "text/plain"));
 
   // ── boot ─────────────────────────────────────────────────────────────
-  updateThemeToggle();
+
   initGame();
   renderGame();
   const initial = location.hash.replace("#", "");

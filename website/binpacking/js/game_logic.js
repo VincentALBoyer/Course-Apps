@@ -10,7 +10,7 @@
 (function () {
   "use strict";
   const BP = (globalThis.BP = globalThis.BP || {});
-  const { pyRound } = BP;
+  const { pyRound } = MG;
 
   const BIN_WIDTH = 20;
   const BIN_HEIGHT = 14;
@@ -91,7 +91,7 @@
 
   /** Reproducible from (seed, difficulty, nInstances) alone. */
   function generateInstances(seed, difficulty, nInstances) {
-    const rng = new BP.PyRandom(seed);
+    const rng = new MG.PyRandom(seed);
     const out = [];
     for (let i = 0; i < nInstances; i++) out.push(generateInstance(i + 1, difficulty, rng));
     return out;

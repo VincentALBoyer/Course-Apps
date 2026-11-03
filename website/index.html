@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Optimization Minigames</title>
+  <meta name="description" content="Interactive classroom minigames on optimization and metaheuristics: greedy bin packing, genetic algorithms, tabu search, and exhaustive vs local search." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>" />
+  <script>
+    // Old bin packing links pointed at the site root with a tab in the
+    // hash (#game, #challenge, #scoring) — send those to its new home.
+    function toBinPacking() {
+      if (/^#(game|challenge|scoring)$/.test(location.hash)) location.replace("binpacking/" + location.hash);
+    }
+    toBinPacking();
+    window.addEventListener("hashchange", toBinPacking);
+    try {
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="shared/base.css?v=dev" />
+  <style>
+    .hero { max-width: 70ch; margin: 32px 0 24px; }
+    .hero h1 { font-size: 2.2rem; margin: 0 0 8px; }
+    .hero p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .card {
+      display: flex; flex-direction: column; gap: 8px;
+      border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+      background: var(--surface); color: var(--text); text-decoration: none;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .card-icon { font-size: 2rem; line-height: 1; }
+    .card h2 { font-size: 1.2rem; margin: 4px 0 0; }
+    .card .topic { font-size: 13px; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; flex: 1; }
+    .card .open { font-size: 14px; font-weight: 600; color: var(--text); }
+    footer { margin-top: 48px; color: var(--muted); font-size: 14px; }
+  </style>
+  <script defer src="shared/ui.js?v=dev"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="brand">🧩 Optimization Minigames</span>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
+    </div>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>Optimization Minigames</h1>
+      <p>Hands-on classroom games for optimization and metaheuristics. Everything runs in your
+        browser, with nothing to install and no sign-in, so a whole class can play at once.</p>
+    </section>
+
+    <nav class="cards" aria-label="Games">
+      <a class="card" href="binpacking/">
+        <span class="card-icon">📦</span>
+        <span class="topic">Greedy heuristics</span>
+        <h2>Greedy Bin Packing</h2>
+        <p>Drag items into a bin to maximize profit, discover your own greedy rule, then generate
+          instances to solve with code and get them graded.</p>
+        <span class="open">Open →</span>
+      </a>
+      <a class="card" href="ga-wordgame/">
+        <span class="card-icon">🧬</span>
+        <span class="topic">Genetic algorithms</span>
+        <h2>GA Word Game</h2>
+        <p>Find a hidden word by running a genetic algorithm by hand: pick parents, cut for
+          crossover, mutate, and select survivors.</p>
+        <span class="open">Open →</span>
+      </a>
+      <a class="card" href="tabu-search/">
+        <span class="card-icon">🔀</span>
+        <span class="topic">Tabu search</span>
+        <h2>Tabu Search: The Grid Game</h2>
+        <p>Build a high-value path on a grid, then improve it with swap moves while a tabu list
+          keeps you from cycling back.</p>
+        <span class="open">Open →</span>
+      </a>
+      <a class="card" href="peak-and-valley/">
+        <span class="card-icon">⛰️</span>
+        <span class="topic">Exhaustive vs. local search</span>
+        <h2>Peak and Valley</h2>
+        <p>Hunt for the lowest point of a hidden landscape with exhaustive, local or greedy
+          search, and see what each one costs.</p>
+        <span class="open">Open →</span>
+      </a>
+    </nav>
+
+    <footer>Most games take a game code: share one with your class and everyone plays the exact same round.</footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,44 @@
+/* GA Word Game — everything else comes from ../shared/base.css. */
+
+/* Wordle-style letter tiles; mutated genes are filled orange. */
+.tiles { display: inline-flex; flex-wrap: nowrap; align-items: center; vertical-align: middle; white-space: nowrap; }
+.tile {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--tile, 30px); height: var(--tile, 30px); margin: 1px; border-radius: 5px;
+  border: 2px solid #2a78d6; color: inherit; background: transparent;
+  font: 700 calc(var(--tile, 30px) * 0.48) ui-monospace, Consolas, monospace;
+}
+.tile.mut { background: #eb6834; border-color: #eb6834; color: #fff; }
+.tile-cut { display: inline-block; width: 3px; height: var(--tile, 30px); background: #c3c2b7; margin: 0 5px; border-radius: 2px; }
+
+.ga-cols { display: grid; grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr); gap: 24px; align-items: start; }
+.ga-cols.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 760px) { .ga-cols, .ga-cols.even { grid-template-columns: minmax(0, 1fr); } }
+
+.member { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 3px 0; }
+.member.sel { grid-template-columns: 28px minmax(0, 1fr) auto; }
+.member .fit { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.member .fit strong { color: var(--text); }
+.member input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.mbtn {
+  font: 600 14px/1 inherit; padding: 8px 0; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.mbtn:hover { background: var(--surface); }
+.mbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+.workspace { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--surface); }
+.parent-line { margin: 6px 0; display: flex; gap: 10px; align-items: center; }
+.children { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 8px; }
+@media (max-width: 520px) { .children { grid-template-columns: minmax(0, 1fr); } }
+.child-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; }
+.dice { font-size: 18px; padding: 2px 10px; }
+.pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pills-label { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.pill {
+  font: 700 14px ui-monospace, Consolas, monospace; min-width: 32px; padding: 5px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+}
+.pill.on { background: #eb6834; border-color: #eb6834; color: #fff; }
+
+.autoplay-board { min-height: 60px; }

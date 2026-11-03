@@ -9,14 +9,17 @@
   <script>
     // Apply a saved light/dark choice before first paint (no flash).
     try {
-      var t = localStorage.getItem("bp-theme");
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
     } catch (e) {}
   </script>
+  <link rel="stylesheet" href="../shared/base.css?v=dev" />
   <link rel="stylesheet" href="css/style.css?v=dev" />
-  <script defer src="vendor/xlsx.full.min.js?v=dev"></script>
-  <script defer src="vendor/plotly-basic.min.js?v=dev"></script>
-  <script defer src="js/rng.js?v=dev"></script>
+  <script defer src="../shared/vendor/xlsx.full.min.js?v=dev"></script>
+  <script defer src="../shared/vendor/plotly-basic.min.js?v=dev"></script>
+  <script defer src="../shared/sha256.js?v=dev"></script>
+  <script defer src="../shared/rng.js?v=dev"></script>
+  <script defer src="../shared/ui.js?v=dev"></script>
   <script defer src="js/game_logic.js?v=dev"></script>
   <script defer src="js/excel_io.js?v=dev"></script>
   <script defer src="js/plotting.js?v=dev"></script>
@@ -26,6 +29,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
+      <a class="home-link" href="../">← All games</a>
       <span class="brand">📦 Greedy Bin Packing</span>
       <nav class="modes" role="tablist" aria-label="Mode">
         <button role="tab" data-mode="game" aria-selected="true">🎮 Game</button>
