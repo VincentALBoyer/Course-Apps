@@ -59,6 +59,7 @@ def init_game():
         "strategy_text": "",
         "completed_instances": [],  # list[Instance], for end-of-game export
         "completed_placements": {},  # {round_idx: list[PlacedItem]}
+        "results_xlsx": None,  # built once on the final report
     }
 
 
@@ -114,6 +115,33 @@ def finish_round():
         game["phase"] = "final"
 
 
+def handle_drop(component_key: str):
+    """on_change callback for the board component.
+
+    Callbacks run before the script reruns, so the board, metrics and
+    feasibility check below all render with the drop already applied —
+    one rerun per drag instead of rendering stale state and forcing a
+    second st.rerun().
+    """
+    game = st.session_state.game
+    drop = st.session_state.get(component_key)
+    rs = game["round_state"]
+    if not drop or rs is None:
+        return
+    sig = (drop.get("source"), drop.get("remove"), drop["item_id"], drop["x"], drop["y"], drop["rotated"])
+    if sig == game["last_drop_sig"]:
+        return
+    game["last_drop_sig"] = sig
+    if drop.get("remove"):
+        remove_placed_item(rs, drop["item_id"])
+    elif drop.get("source") == "placed":
+        move_placed_item(rs, drop["item_id"], drop["x"], drop["y"], drop["rotated"])
+    else:
+        item = next((it for it in rs.items if it.id == drop["item_id"]), None)
+        if item is not None:
+            place_item(rs, item, drop["x"], drop["y"], drop["rotated"])
+
+
 def render_bin_packer(rs: RoundState):
     items_payload = [
         {"id": it.id, "w": it.w, "h": it.h, "profit": it.profit, "color": it.color}
@@ -126,10 +154,11 @@ def render_bin_packer(rs: RoundState):
         }
         for p in rs.placed
     ]
-    return bin_packer(
+    key = f"bin_packer_r{rs.round_idx}"
+    bin_packer(
         bin_w=rs.bin_w, bin_h=rs.bin_h,
         items=items_payload, placed=placed_payload,
-        key=f"bin_packer_r{rs.round_idx}",
+        key=key, on_change=lambda: handle_drop(key),
     )
 
 
@@ -184,21 +213,7 @@ across all 5 rounds. Your total time is tracked too.
             "profit and size."
         )
 
-        drop = render_bin_packer(rs)
-
-        if drop:
-            sig = (drop.get("source"), drop.get("remove"), drop["item_id"], drop["x"], drop["y"], drop["rotated"])
-            if sig != game["last_drop_sig"]:
-                game["last_drop_sig"] = sig
-                if drop.get("remove"):
-                    remove_placed_item(rs, drop["item_id"])
-                elif drop.get("source") == "placed":
-                    move_placed_item(rs, drop["item_id"], drop["x"], drop["y"], drop["rotated"])
-                else:
-                    item = next((it for it in rs.items if it.id == drop["item_id"]), None)
-                    if item is not None:
-                        place_item(rs, item, drop["x"], drop["y"], drop["rotated"])
-                st.rerun()
+        render_bin_packer(rs)
 
         next_label = "See final report" if rs.round_idx == N_ROUNDS else "Next round"
         confirm = True
@@ -279,12 +294,15 @@ across all 5 rounds. Your total time is tracked too.
             file_name="greedy_bin_packing_report.txt", mime="text/plain",
         )
 
-        results_bytes = instances_workbook_bytes(
-            game["completed_instances"], seed="game-mode", difficulty="1-5", n_instances=N_ROUNDS,
-            placements_by_instance=game["completed_placements"],
-        )
+        # Results can't change once the game is over, so build the workbook
+        # once instead of on every rerun (e.g. each strategy-text edit).
+        if game.get("results_xlsx") is None:
+            game["results_xlsx"] = instances_workbook_bytes(
+                game["completed_instances"], seed="game-mode", difficulty="1-5", n_instances=N_ROUNDS,
+                placements_by_instance=game["completed_placements"],
+            )
         c2.download_button(
-            "Download my results (.xlsx)", data=results_bytes,
+            "Download my results (.xlsx)", data=game["results_xlsx"],
             file_name="game_results.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
@@ -315,21 +333,29 @@ instances you want bundled into one file.
     n_instances = col3.number_input("Number of instances", min_value=1, max_value=50, value=10, step=1)
 
     if st.button("Generate instances", type="primary"):
-        st.session_state["challenge_instances"] = generate_instances(int(seed), float(difficulty), int(n_instances))
-        st.session_state["challenge_params"] = (int(seed), int(difficulty), int(n_instances))
+        seed_p, diff_p, n_p = int(seed), int(difficulty), int(n_instances)
+        instances = generate_instances(seed_p, float(diff_p), n_p)
+        # Build the workbook once here and keep only its bytes — rebuilding it
+        # on every rerun cost ~1s of shared server CPU at high difficulty, and
+        # keeping the Instance objects around held thousands of items per session.
+        st.session_state["challenge_file"] = {
+            "params": (seed_p, diff_p, n_p),
+            "n_generated": len(instances),
+            "total_items": sum(len(inst.items) for inst in instances),
+            "xlsx": instances_workbook_bytes(instances, seed_p, diff_p, n_p),
+        }
 
-    instances = st.session_state.get("challenge_instances")
-    if instances:
-        seed_p, diff_p, n_p = st.session_state["challenge_params"]
-        total_items = sum(len(inst.items) for inst in instances)
+    challenge_file = st.session_state.get("challenge_file")
+    if challenge_file:
+        seed_p, diff_p, n_p = challenge_file["params"]
         st.success(
-            f"Generated {len(instances)} instance(s) — seed {seed_p}, difficulty {diff_p}, "
-            f"{total_items} items total."
+            f"Generated {challenge_file['n_generated']} instance(s) — seed {seed_p}, difficulty {diff_p}, "
+            f"{challenge_file['total_items']} items total."
         )
 
         st.download_button(
             "Download instances (.xlsx)",
-            data=instances_workbook_bytes(instances, seed_p, diff_p, n_p),
+            data=challenge_file["xlsx"],
             file_name=f"instances_seed{seed_p}_d{diff_p}_n{n_p}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",

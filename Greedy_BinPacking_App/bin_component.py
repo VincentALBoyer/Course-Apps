@@ -23,12 +23,15 @@ _FRONTEND_DIR = Path(__file__).parent / "frontend"
 _bin_packer_component = components.declare_component("bin_packer", path=str(_FRONTEND_DIR))
 
 
-def bin_packer(bin_w, bin_h, items, placed, key=None):
+def bin_packer(bin_w, bin_h, items, placed, key=None, on_change=None):
     """Render the drag-and-drop bin board.
 
     Returns the last drop event as {"item_id", "x", "y", "rotated"}, or None
-    if nothing has been dropped yet for this component instance.
+    if nothing has been dropped yet for this component instance. If
+    on_change is given, it is called with no arguments before the rerun that
+    a new drop event triggers; the event is then in st.session_state[key].
     """
     return _bin_packer_component(
         bin_w=bin_w, bin_h=bin_h, items=items, placed=placed, key=key, default=None,
+        on_change=on_change,
     )

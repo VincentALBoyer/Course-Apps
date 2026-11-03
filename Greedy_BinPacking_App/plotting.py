@@ -21,11 +21,16 @@ def build_instance_figure(bin_w: int, bin_h: int, items_by_id: dict, placed: lis
     placed_ids = {p["item_id"] for p in placed}
     show_labels = len(placed) <= LABEL_ITEM_THRESHOLD
 
-    fig = go.Figure()
-    fig.add_shape(
+    # Shapes and annotations are collected as plain dicts and handed to
+    # Plotly in a single update_layout call. Calling fig.add_shape /
+    # fig.add_annotation once per item re-validates the whole growing list
+    # every time (quadratic), which took ~9s of server CPU for a ~400-item
+    # instance and stalled every other session sharing the process.
+    shapes = [dict(
         type="rect", x0=0, y0=0, x1=bin_w, y1=bin_h,
         line=dict(color="black", width=2), fillcolor="rgba(0,0,0,0)",
-    )
+    )]
+    annotations = []
 
     # Grid lines only inside the bin, not across the whole plot area — drawn
     # as shapes (clipped to [0,bin_w]x[0,bin_h]) rather than via the axes'
@@ -33,9 +38,9 @@ def build_instance_figure(bin_w: int, bin_h: int, items_by_id: dict, placed: lis
     grid_step_x = max(1, bin_w // 30)
     grid_step_y = max(1, bin_h // 30)
     for gx in range(0, bin_w + 1, grid_step_x):
-        fig.add_shape(type="line", x0=gx, y0=0, x1=gx, y1=bin_h, line=dict(color="#eee", width=1), layer="below")
+        shapes.append(dict(type="line", x0=gx, y0=0, x1=gx, y1=bin_h, line=dict(color="#eee", width=1), layer="below"))
     for gy in range(0, bin_h + 1, grid_step_y):
-        fig.add_shape(type="line", x0=0, y0=gy, x1=bin_w, y1=gy, line=dict(color="#eee", width=1), layer="below")
+        shapes.append(dict(type="line", x0=0, y0=gy, x1=bin_w, y1=gy, line=dict(color="#eee", width=1), layer="below"))
 
     border_color = "#333" if feasible else "#d32f2f"
     border_width = 2 if not feasible else (1 if show_labels else 0.5)
@@ -48,25 +53,28 @@ def build_instance_figure(bin_w: int, bin_h: int, items_by_id: dict, placed: lis
         # in-game instead of rendering it upside down.
         y0 = bin_h - p["y"] - p["h"]
         y1 = bin_h - p["y"]
-        fig.add_shape(
+        shapes.append(dict(
             type="rect", x0=p["x"], y0=y0, x1=p["x"] + p["w"], y1=y1,
             line=dict(color=border_color, width=border_width), fillcolor=color,
-        )
+        ))
         if show_labels:
-            fig.add_annotation(
+            annotations.append(dict(
                 x=p["x"] + p["w"] / 2, y=(y0 + y1) / 2,
                 text=f"#{p['item_id']}", showarrow=False, font=dict(color="white", size=11),
-            )
+            ))
 
     unplaced = sorted(iid for iid in items_by_id if iid not in placed_ids)
     if unplaced:
         shown = ", ".join("#" + str(i) for i in unplaced[:MAX_UNPLACED_LISTED])
         more = f" … and {len(unplaced) - MAX_UNPLACED_LISTED} more" if len(unplaced) > MAX_UNPLACED_LISTED else ""
-        fig.add_annotation(
+        annotations.append(dict(
             x=0, y=bin_h, xanchor="left", yanchor="bottom", showarrow=False,
             text=f"Not placed ({len(unplaced)}): {shown}{more}",
             font=dict(size=11, color="#666"),
-        )
+        ))
+
+    fig = go.Figure()
+    fig.update_layout(shapes=shapes, annotations=annotations)
 
     pad = max(bin_w, bin_h) * 0.05
     fig.update_xaxes(range=[-pad, bin_w + pad], showgrid=False, zeroline=False, showticklabels=True, dtick=grid_step_x)
