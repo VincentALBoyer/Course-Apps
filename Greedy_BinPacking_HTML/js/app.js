@@ -81,15 +81,19 @@
   const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
   const currentTheme = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
 
+  // The button may be missing if a browser pairs a cached older page with
+  // this script right after a deploy — the rest of the app must still run.
+  const themeBtn = $("theme-toggle");
+
   function updateThemeToggle() {
+    if (!themeBtn) return;
     const dark = currentTheme() === "dark";
-    const btn = $("theme-toggle");
-    btn.textContent = dark ? "☀️ Light" : "🌙 Dark";
-    btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
-    btn.title = btn.getAttribute("aria-label");
+    themeBtn.textContent = dark ? "☀️ Light" : "🌙 Dark";
+    themeBtn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    themeBtn.title = themeBtn.getAttribute("aria-label");
   }
 
-  $("theme-toggle").addEventListener("click", () => {
+  if (themeBtn) themeBtn.addEventListener("click", () => {
     const next = currentTheme() === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem("bp-theme", next); } catch (e) { /* storage blocked: still switches */ }
