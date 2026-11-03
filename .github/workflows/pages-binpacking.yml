@@ -1,0 +1,38 @@
+# Publishes Greedy_BinPacking_HTML/ (and nothing else from this repo) to
+# GitHub Pages. One-time setup: repo Settings → Pages → Build and deployment
+# → Source: "GitHub Actions".
+name: Deploy bin packing (HTML) to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Greedy_BinPacking_HTML/**"
+      - ".github/workflows/pages-binpacking.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: Greedy_BinPacking_HTML
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: Greedy_BinPacking_HTML
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Greedy Bin Packing</title>
+  <meta name="description" content="A 2D bin-packing game for discovering greedy heuristics, plus an instance generator and grader for offline solutions." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script defer src="vendor/xlsx.full.min.js"></script>
+  <script defer src="vendor/plotly-basic.min.js"></script>
+  <script defer src="js/rng.js"></script>
+  <script defer src="js/game_logic.js"></script>
+  <script defer src="js/excel_io.js"></script>
+  <script defer src="js/plotting.js"></script>
+  <script defer src="js/board.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="brand">📦 Greedy Bin Packing</span>
+      <nav class="modes" role="tablist" aria-label="Mode">
+        <button role="tab" data-mode="game" aria-selected="true">🎮 Game</button>
+        <button role="tab" data-mode="challenge" aria-selected="false">🧪 Challenge</button>
+        <button role="tab" data-mode="scoring" aria-selected="false">📊 Scoring</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ───────────────────────────── Game ───────────────────────────── -->
+    <section id="mode-game" class="mode" role="tabpanel">
+      <h1>📦 Greedy Bin Packing — Game</h1>
+
+      <div id="game-intro" class="phase">
+        <div class="prose">
+          <h3>The challenge</h3>
+          <p>You have <strong>one fixed bin</strong>. Items arrive for each round — drag them from
+          the list on the left and drop them into the bin. You can drag a placed
+          item again later to reposition it, or drag it back onto the list to
+          remove it. There are <strong>5 rounds</strong>, and each one is harder than the last.</p>
+          <p>Overlaps and out-of-bounds placements are allowed while you're playing —
+          but if your layout still has any when the round ends, that round scores
+          <strong>0 profit</strong>, no matter what you packed.</p>
+          <p>Each item has a <strong>profit</strong> (its color — pale to deep red — tells you how
+          valuable it is; hover an item to see the exact numbers) and a size. There's
+          no way to work out the perfect layout by hand here (packing rectangles
+          into a bin for maximum value is a genuinely hard problem) — so just go
+          with your gut. Whatever rule of thumb you end up using without thinking
+          about it too hard — biggest first? most valuable first? — is worth
+          remembering.</p>
+          <p><strong>Scoring:</strong> your score is the total profit of everything you packed,
+          across all 5 rounds. Your total time is tracked too.</p>
+        </div>
+        <button id="game-start" class="btn primary">Start</button>
+      </div>
+
+      <div id="game-playing" class="phase" hidden>
+        <h2 id="round-title">Round 1 of 5</h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed">0s</div></div>
+          <div class="metric"><div class="metric-label">Profit so far</div><div class="metric-value" id="m-profit">0</div></div>
+          <div class="metric"><div class="metric-label">Utilization</div><div class="metric-value" id="m-util">0%</div></div>
+        </div>
+        <p class="caption">Drag a card from the list into the bin. Once placed, drag an item to move
+          it, click ⟳ to rotate it, or click ✕ to remove it. Hover a card to see its
+          profit and size.</p>
+        <div class="board-scroll"><div id="board"></div></div>
+        <label id="confirm-wrap" class="checkbox" hidden>
+          <input type="checkbox" id="confirm-infeasible" />
+          I understand this round will score 0 profit because of the overlap/out-of-bounds items above
+        </label>
+        <button id="game-next" class="btn primary">Next round</button>
+      </div>
+
+      <div id="game-final" class="phase" hidden>
+        <h2>🏁 Final report</h2>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Total score (profit)</div><div class="metric-value" id="f-score"></div></div>
+          <div class="metric"><div class="metric-label">Total time</div><div class="metric-value" id="f-time"></div></div>
+          <div class="metric"><div class="metric-label">Avg. utilization</div><div class="metric-value" id="f-util"></div></div>
+        </div>
+        <div class="table-wrap"><table id="final-table"></table></div>
+        <div id="final-chart" class="chart"></div>
+        <div class="row">
+          <button id="dl-results" class="btn">Download my results (.xlsx)</button>
+          <button id="play-again" class="btn">Play again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── Challenge ─────────────────────────── -->
+    <section id="mode-challenge" class="mode" role="tabpanel" hidden>
+      <h1>🧪 Challenge Mode — Instance Generator</h1>
+      <div class="prose">
+        <p>Generate a batch of bin-packing instances to solve <strong>offline</strong> with your own
+        code. Same rules as the game: one fixed bin per instance, pack items to
+        maximize profit, no overlaps or out-of-bounds placements allowed.</p>
+        <p>Pick a <strong>seed</strong> so your batch is reproducible, a <strong>difficulty</strong> level (higher
+        = more items, a bigger bin, and tighter capacity — difficulty 10 means
+        hundreds of items, well past anything solvable by hand), and how many
+        instances you want bundled into one file.</p>
+      </div>
+      <div class="inputs">
+        <label class="field"><span>Seed / code</span>
+          <input type="number" id="c-seed" min="0" step="1" value="42" inputmode="numeric" /></label>
+        <label class="field"><span>Difficulty <output id="c-diff-out">5</output></span>
+          <input type="range" id="c-diff" min="1" max="10" step="1" value="5" /></label>
+        <label class="field"><span>Number of instances</span>
+          <input type="number" id="c-n" min="1" max="50" step="1" value="10" inputmode="numeric" /></label>
+      </div>
+      <button id="c-generate" class="btn primary">Generate instances</button>
+      <div id="c-result" hidden>
+        <div class="alert success" id="c-summary"></div>
+        <button id="c-download" class="btn primary">Download instances (.xlsx)</button>
+        <p class="caption">One row per item, with blank x, y, and rotated columns. Fill those in
+          (TRUE/FALSE for rotated) for whichever items your algorithm decides to
+          pack, and leave them blank for anything you skip — then upload this same
+          file, filled in, to Scoring mode to get graded.</p>
+      </div>
+    </section>
+
+    <!-- ──────────────────────────── Scoring ──────────────────────────── -->
+    <section id="mode-scoring" class="mode" role="tabpanel" hidden>
+      <h1>📊 Scoring Mode — Grade a Submission</h1>
+      <div class="prose">
+        <p>Upload your completed instances file (the one from Challenge mode, with the
+        x/y/rotated columns filled in offline). Each instance is graded
+        independently — an instance with any overlapping or out-of-bounds item
+        scores <strong>0 profit</strong>, regardless of what else was packed correctly.</p>
+        <p>The file is also checked against the signature recorded when it was
+        generated, to flag whether the underlying instance data (bin size, item
+        dimensions, profits) was altered.</p>
+      </div>
+      <label class="field"><span>Completed instances file (.xlsx)</span>
+        <input type="file" id="s-file" accept=".xlsx" /></label>
+      <button id="s-score" class="btn primary" disabled>Score submission</button>
+      <div id="s-error" class="alert error" hidden></div>
+      <div id="s-results" hidden>
+        <div id="s-integrity" class="alert"></div>
+        <div class="metrics four">
+          <div class="metric"><div class="metric-label">Total score</div><div class="metric-value" id="s-total"></div></div>
+          <div class="metric"><div class="metric-label">Potential</div><div class="metric-value" id="s-potential"></div></div>
+          <div class="metric"><div class="metric-label">Feasible instances</div><div class="metric-value" id="s-feasible"></div></div>
+          <div class="metric"><div class="metric-label">Avg. utilization</div><div class="metric-value" id="s-util"></div></div>
+        </div>
+        <div class="table-wrap"><table id="s-table"></table></div>
+        <button id="s-dl-report" class="btn">Download report (.txt)</button>
+        <h3>Inspect a solution</h3>
+        <label class="field"><span>Instance to plot</span><select id="s-select"></select></label>
+        <div id="s-infeasible" class="alert error" hidden>This instance's solution is infeasible (overlap or out-of-bounds) — scored 0 profit.</div>
+        <div id="s-plot" class="chart"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast-stack" aria-live="polite"></div>
+  <noscript><p class="alert error">This page needs JavaScript to run.</p></noscript>
+</body>
+</html>
