@@ -17,8 +17,10 @@
   --radius: 8px;
   color-scheme: light;
 }
+/* Dark tokens apply when the system is dark and the visitor hasn't picked
+ * light, or when the visitor picked dark (data-theme set by the toggle). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15171a;
     --surface: #1e2125;
     --surface-2: #272b30;
@@ -36,6 +38,24 @@
     --focus: #7aa7f2;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a;
+    --surface: #1e2125;
+    --surface-2: #272b30;
+    --text: #e8eaed;
+    --muted: #a0a7b1;
+    --border: #363b42;
+    --accent: #ef6a4f;
+    --accent-text: #15171a;
+    --success-bg: #17311f;
+    --success-text: #8fd6a2;
+    --error-bg: #3a1c19;
+    --error-text: #f3a69b;
+    --info-bg: #172a45;
+    --info-text: #9cc2f5;
+  --focus: #7aa7f2;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -67,6 +87,23 @@ body {
 }
 .modes button:hover { background: var(--surface); color: var(--text); }
 .modes button[aria-selected="true"] { background: var(--surface-2); color: var(--text); border-color: var(--border); font-weight: 600; }
+.theme-toggle {
+  margin-left: auto;
+  font: inherit; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text);
+  padding: 5px 12px; cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface-2); }
+/* Phones: title + toggle on one row, tabs on the next, so the sticky
+ * header stays two rows tall. */
+@media (max-width: 640px) {
+  .topbar-inner { gap: 8px 12px; padding: 8px 16px; }
+  .theme-toggle { order: 2; }
+  .modes { order: 3; width: 100%; }
+  .modes button { font-size: 14px; padding: 5px 10px; }
+}
 
 main { max-width: 1180px; margin: 0 auto; padding: 8px 16px 64px; }
 h1 { font-size: 1.9rem; line-height: 1.25; margin: 24px 0 16px; }

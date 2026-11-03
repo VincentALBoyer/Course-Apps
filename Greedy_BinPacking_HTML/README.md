@@ -25,6 +25,9 @@ Differences from the Streamlit version:
 - The Elapsed timer ticks live.
 - The Scoring plot lets Plotly choose its axis ticks.
 - The page warns before you leave in the middle of a game.
+- A ☀️/🌙 button in the top bar switches between light and dark mode. The
+  page starts from the system setting, and each browser remembers its own
+  choice.
 
 ## Layout
 

@@ -6,6 +6,13 @@
   <title>Greedy Bin Packing</title>
   <meta name="description" content="A 2D bin-packing game for discovering greedy heuristics, plus an instance generator and grader for offline solutions." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>" />
+  <script>
+    // Apply a saved light/dark choice before first paint (no flash).
+    try {
+      var t = localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="css/style.css" />
   <script defer src="vendor/xlsx.full.min.js"></script>
   <script defer src="vendor/plotly-basic.min.js"></script>
@@ -25,6 +32,7 @@
         <button role="tab" data-mode="challenge" aria-selected="false">🧪 Challenge</button>
         <button role="tab" data-mode="scoring" aria-selected="false">📊 Scoring</button>
       </nav>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
     </div>
   </header>
 

@@ -69,6 +69,41 @@
     Plotly.react(el, fig.data, fig.layout, { responsive: true, displaylogo: false });
   }
 
+  /** Current text colors from the CSS theme tokens, for Plotly. */
+  function themeColors() {
+    const css = getComputedStyle(document.documentElement);
+    return { text: css.getPropertyValue("--text").trim(), muted: css.getPropertyValue("--muted").trim() };
+  }
+
+  // ── light / dark toggle ──────────────────────────────────────────────
+  // Starts from the system setting; an explicit choice is remembered per
+  // browser (applied before first paint by the inline script in <head>).
+  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+  const currentTheme = () => document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light");
+
+  function updateThemeToggle() {
+    const dark = currentTheme() === "dark";
+    const btn = $("theme-toggle");
+    btn.textContent = dark ? "☀️ Light" : "🌙 Dark";
+    btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    btn.title = btn.getAttribute("aria-label");
+  }
+
+  $("theme-toggle").addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("bp-theme", next); } catch (e) { /* storage blocked: still switches */ }
+    updateThemeToggle();
+    rerenderCharts();
+  });
+  systemDark.addEventListener("change", () => { updateThemeToggle(); rerenderCharts(); });
+
+  // Plotly bakes colors into the SVG, so charts are redrawn on theme change.
+  function rerenderCharts() {
+    if (game && game.phase === "final") renderFinalChart();
+    if (scoring) renderSelectedInstance();
+  }
+
   // ── mode switching ───────────────────────────────────────────────────
   const tabs = document.querySelectorAll(".modes button");
   function setMode(mode) {
@@ -197,21 +232,32 @@
       { key: "items_placed", label: "Items placed" },
       { key: "items_total", label: "Items offered" },
     ], rows);
-    plot($("final-chart"), {
-      data: [{ type: "bar", x: rows.map((r) => r.round), y: rows.map((r) => r.profit), name: "Your profit", marker: { color: "#d9452b" } }],
-      layout: {
-        xaxis: { title: { text: "Round" }, dtick: 1 }, yaxis: { title: { text: "Profit" } },
-        height: 350, margin: { l: 60, r: 10, t: 30, b: 50 },
-        paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
-        font: { color: getComputedStyle(document.body).color },
-      },
-    });
+    renderFinalChart();
     if (!game.results_xlsx) {
       // Results can't change once the game is over: build the workbook once.
       game.results_xlsx = X.instancesWorkbookBytes(
         game.completed_instances, "game-mode", "1-5", N_ROUNDS, game.completed_placements,
       );
     }
+  }
+
+  function renderFinalChart() {
+    const rows = game.round_results;
+    const colors = themeColors();
+    const css = getComputedStyle(document.documentElement);
+    plot($("final-chart"), {
+      data: [{
+        type: "bar", x: rows.map((r) => r.round), y: rows.map((r) => r.profit), name: "Your profit",
+        marker: { color: css.getPropertyValue("--accent").trim() },
+      }],
+      layout: {
+        xaxis: { title: { text: "Round" }, dtick: 1 },
+        yaxis: { title: { text: "Profit" }, gridcolor: css.getPropertyValue("--border").trim() },
+        height: 350, margin: { l: 60, r: 10, t: 30, b: 50 },
+        paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+        font: { color: colors.text },
+      },
+    });
   }
 
   function renderGame() {
@@ -368,12 +414,13 @@
     const d = scoring.reconstructed.get(id);
     if (!d) return;
     $("s-infeasible").hidden = d.feasible;
-    plot($("s-plot"), P.buildInstanceFigure(d.bin_w, d.bin_h, d.items_by_id, d.placed, d.feasible));
+    plot($("s-plot"), P.buildInstanceFigure(d.bin_w, d.bin_h, d.items_by_id, d.placed, d.feasible, themeColors()));
   }
   $("s-select").addEventListener("change", renderSelectedInstance);
   $("s-dl-report").addEventListener("click", () => download(scoringReportText(), "scoring_report.txt", "text/plain"));
 
   // ── boot ─────────────────────────────────────────────────────────────
+  updateThemeToggle();
   initGame();
   renderGame();
   const initial = location.hash.replace("#", "");

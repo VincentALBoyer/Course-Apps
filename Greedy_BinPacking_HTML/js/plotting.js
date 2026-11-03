@@ -14,17 +14,23 @@
   const MAX_UNPLACED_LISTED = 30;
   const UNPLACED_PER_LINE = 10;
 
-  /** Returns {data, layout} for Plotly.react. itemsById: Map id -> [w, h, profit]. */
-  function buildInstanceFigure(binW, binH, itemsById, placed, feasible) {
+  /** Returns {data, layout} for Plotly.react. itemsById: Map id -> [w, h, profit].
+   *  colors: page theme colors for axis text ({text, muted}). */
+  function buildInstanceFigure(binW, binH, itemsById, placed, feasible, colors = { text: "#444", muted: "#666" }) {
     const profits = [...itemsById.values()].map((v) => v[2]);
     const [vmin, vmax] = profits.length ? [Math.min(...profits), Math.max(...profits)] : [0, 1];
     const placedIds = new Set(placed.map((p) => p.item_id));
     const showLabels = placed.length <= LABEL_ITEM_THRESHOLD;
 
-    const shapes = [{
-      type: "rect", x0: 0, y0: 0, x1: binW, y1: binH,
-      line: { color: "black", width: 2 }, fillcolor: "rgba(0,0,0,0)",
-    }];
+    // The bin itself is always white with a light grid (like the game
+    // board), so its black outline and grid read the same in both themes.
+    const shapes = [
+      { type: "rect", x0: 0, y0: 0, x1: binW, y1: binH, line: { width: 0 }, fillcolor: "#fff", layer: "below" },
+      {
+        type: "rect", x0: 0, y0: 0, x1: binW, y1: binH,
+        line: { color: "black", width: 2 }, fillcolor: "rgba(0,0,0,0)",
+      },
+    ];
     const annotations = [];
 
     // Grid lines only inside the bin, not across the padded plot area.
@@ -67,7 +73,7 @@
       notPlacedLines = lines.length;
       annotations.push({
         x: 0, y: binH, xanchor: "left", yanchor: "bottom", align: "left", showarrow: false,
-        text: lines.join("<br>"), font: { size: 11, color: "#666" },
+        text: lines.join("<br>"), font: { size: 11, color: colors.muted },
       });
     }
 
@@ -88,6 +94,7 @@
         margin: { l: 40, r: 10, t: 30 + 14 * Math.max(0, notPlacedLines - 1), b: 30 },
         paper_bgcolor: "rgba(0,0,0,0)",
         plot_bgcolor: "rgba(0,0,0,0)",
+        font: { color: colors.text },
       },
     };
   }
