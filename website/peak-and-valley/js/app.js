@@ -114,7 +114,15 @@
     S.lsStarted = true;
   }
 
+  /** Only legal while stuck at a local optimum with restarts left — a
+   * stale or repeated click on the button must never push past the cap. */
+  function canRestart() {
+    return S.phase === "playing" && S.mode === "local" && S.lsStarted
+      && !improvingNow().size && S.lsRestartsUsed < S.maxRestarts;
+  }
+
   function restartLocalSearch() {
+    if (!canRestart()) return;
     S.lsRestartsUsed += 1;
     S.lsStarted = false;
     S.lsCurrentX = null;
@@ -208,7 +216,7 @@
         const bx = S.lsBestX;
         const by = S.lsBestY;
         const left = S.maxRestarts - S.lsRestartsUsed;
-        if (left > 0) {
+        if (canRestart()) {
           panel.push(`<div class="alert warning">🪤 Attempt ${S.lsRestartsUsed + 1} reached a local optimum at x=${cx} (f=${f2(cy)}). Best result so far: f=${f2(by)} at x=${bx}. ${left} restart(s) left.</div>`);
           panel.push(`<div class="row"><button class="btn" data-act="restart-ls">🔄 Restart from a new point</button><button class="btn primary" data-act="accept-best">🏁 Accept best result (f=${f2(by)})</button></div>`);
         } else {
@@ -345,8 +353,9 @@
 
   $("play-panel").addEventListener("click", (e) => {
     const act = e.target.closest("[data-act]")?.dataset.act;
+    if (S.phase !== "playing") return;
     if (act === "restart-ls") restartLocalSearch();
-    else if (act === "accept-best") finishRound(S.lsBestX, S.lsBestY);
+    else if (act === "accept-best" && S.lsBestX !== null) finishRound(S.lsBestX, S.lsBestY);
     else return;
     render();
   });
