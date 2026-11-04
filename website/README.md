@@ -9,7 +9,7 @@ puts no load on any server. There is nothing to install and no sign-in.
 | Path | Game | Ported from |
 |---|---|---|
 | `/` | Home page with a card for each game | — |
-| `/binpacking/` | 📦 Greedy Bin Packing | [`Greedy_BinPacking_App`](../streamlit-apps/Greedy_BinPacking_App) |
+| `/binpacking/` | 📦 Greedy Bin Packing | [`Greedy_BinPacking_App`](../Greedy_BinPacking_App) |
 | `/ga-wordgame/` | 🧬 GA Word Game | [`GA_WordGame_App`](../streamlit-apps/GA_WordGame_App) |
 | `/tabu-search/` | 🔀 Tabu Search: The Grid Game | [`TabuSearch_GridGame_App`](../streamlit-apps/TabuSearch_GridGame_App) |
 | `/peak-and-valley/` | ⛰️ Peak and Valley | [`ExhaustiveVsLocalSearch_App`](../streamlit-apps/ExhaustiveVsLocalSearch_App) |

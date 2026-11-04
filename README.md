@@ -22,14 +22,15 @@ Source and details are in [`website/`](website).
 
 ## Streamlit apps (no longer maintained)
 
-> ⚠️ The Streamlit apps in [`streamlit-apps/`](streamlit-apps) are **no longer
+> ⚠️ The Streamlit apps in [`streamlit-apps/`](streamlit-apps) and
+> [`Greedy_BinPacking_App/`](Greedy_BinPacking_App) are **no longer
 > maintained**. They are kept for reference and still run, but they won't
 > receive fixes or updates. Four of them have a web version above, which gives
 > the same games for the same game codes.
 
 | App | Web version |
 |---|---|
-| [`Greedy_BinPacking_App`](streamlit-apps/Greedy_BinPacking_App) | [Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) |
+| [`Greedy_BinPacking_App`](Greedy_BinPacking_App) | [Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) |
 | [`GA_WordGame_App`](streamlit-apps/GA_WordGame_App) | [GA Word Game](https://vincentalboyer.github.io/Course-Apps/ga-wordgame/) |
 | [`TabuSearch_GridGame_App`](streamlit-apps/TabuSearch_GridGame_App) | [Tabu Search](https://vincentalboyer.github.io/Course-Apps/tabu-search/) |
 | [`ExhaustiveVsLocalSearch_App`](streamlit-apps/ExhaustiveVsLocalSearch_App) | [Peak and Valley](https://vincentalboyer.github.io/Course-Apps/peak-and-valley/) |
@@ -49,6 +50,8 @@ website/          the maintained website (GitHub Pages)
 streamlit-apps/   Streamlit apps, no longer maintained
   Archive/        older, retired apps
   tests/          tests for the Streamlit game logic
+Greedy_BinPacking_App/   Streamlit bin packing app, no longer maintained;
+                         kept at the root so binpacking.streamlit.app keeps working
 ```
 
 ## License

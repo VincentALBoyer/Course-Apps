@@ -12,7 +12,7 @@
 
 | Folder | What it is | Web version |
 |---|---|---|
-| [`Greedy_BinPacking_App`](Greedy_BinPacking_App) | 2D bin packing minigame for greedy heuristics: drag-and-drop game, Excel challenge generator, and grader. | [Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) |
+| [`Greedy_BinPacking_App`](../Greedy_BinPacking_App) (at the repo root) | 2D bin packing minigame for greedy heuristics: drag-and-drop game, Excel challenge generator, and grader. | [Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) |
 | [`GA_WordGame_App`](GA_WordGame_App) | Genetic algorithm minigame: run selection, crossover and mutation by hand to evolve a hidden word. | [GA Word Game](https://vincentalboyer.github.io/Course-Apps/ga-wordgame/) |
 | [`TabuSearch_GridGame_App`](TabuSearch_GridGame_App) | Tabu search minigame: build a max-sum path on a grid, then improve it with swap moves, tenure and aspiration. | [Tabu Search](https://vincentalboyer.github.io/Course-Apps/tabu-search/) |
 | [`ExhaustiveVsLocalSearch_App`](ExhaustiveVsLocalSearch_App) | Exhaustive vs. local search over a hidden 1-D landscape. | [Peak and Valley](https://vincentalboyer.github.io/Course-Apps/peak-and-valley/) |
@@ -45,5 +45,8 @@ pytest streamlit-apps/tests
 ## Streamlit Community Cloud
 
 Each deployed app points to a file path in this repo. Those paths now start
-with `streamlit-apps/`. For example, the bin packing app's main file is
-`streamlit-apps/Greedy_BinPacking_App/app.py`.
+with `streamlit-apps/`, for example `streamlit-apps/GA_WordGame_App/app.py`.
+
+The bin packing app is the exception: it stays at the repo root,
+`Greedy_BinPacking_App/app.py`, so its existing deployment
+(binpacking.streamlit.app) keeps working.
