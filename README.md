@@ -1,44 +1,56 @@
-# MyStreamlitApp
+# Course-Apps
 
-A collection of Streamlit-based teaching simulations and minigames for operations, supply chain, and optimization courses.
+Apps and minigames used as in-class support for operations, supply chain and
+optimization courses.
 
-## Applications
+## Website (maintained)
 
-- **[ERP_App](ERP_App)**: Integrated ERP simulation ("Global Gadgets Inc.") covering SRM, CRM, Inventory & Ops, and Finance modules on a shared game state, plus a built-in "What is an ERP?" lesson page.
-- **[Greedy_BinPacking_App](Greedy_BinPacking_App)**: 2D bin-packing minigame teaching greedy heuristics — drag-and-drop game mode, offline Excel challenge generator, and a scoring/grading mode for submitted layouts.
-- **[ExhaustiveVsLocalSearch_App](ExhaustiveVsLocalSearch_App)**: Minigame contrasting exhaustive vs. local search over a hidden 1-D landscape, built for an "Computational Complexity and Basic Optimization Concepts" course session. See its own [README](ExhaustiveVsLocalSearch_App/README.md) for details.
-- **[GA_WordGame_App](GA_WordGame_App)**: Hands-on Genetic Algorithm minigame — hand-run selection, crossover, and mutation to evolve a hidden word. See its own [README](GA_WordGame_App/README.md) for details.
-- **[TabuSearch_GridGame_App](TabuSearch_GridGame_App)**: Tabu Search minigame — build a max-sum path on a grid, then improve it with swap moves, tabu tenure, and aspiration, watching how tenure=0 cycles and how auto-play escapes local optima. See its own [README](TabuSearch_GridGame_App/README.md) for details.
-- **[EGEL-Area2](EGEL-Area2)**: "Mega-Factory: Lockdown" — an escape-room-style review game (in Spanish) for EGEL-IINDU exam preparation.
-- **[Kids_MathWriting_App](Kids_MathWriting_App)**: "Aventura Mágica: Números y Letras" — a colorful, mascot-guided game (in Spanish) for young kids to practice addition, multiplication as equal groups, and Spanish spelling. See its own [README](Kids_MathWriting_App/README.md) for details.
+**https://vincentalboyer.github.io/Course-Apps/**
 
-Older/retired apps (CRM, SRM, ERP_Sim, Project Scheduling, etc.) live under [Archive](Archive) and are not actively maintained.
+Browser versions of the optimization minigames. They run entirely in each
+student's browser, so a whole class can play at once, with nothing to install
+and no sign-in.
 
-## Website (no install)
+| Game | Topic |
+|---|---|
+| [📦 Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) | Greedy heuristics, with an instance generator and a grader |
+| [🧬 GA Word Game](https://vincentalboyer.github.io/Course-Apps/ga-wordgame/) | Genetic algorithms |
+| [🔀 Tabu Search: The Grid Game](https://vincentalboyer.github.io/Course-Apps/tabu-search/) | Tabu search |
+| [⛰️ Peak and Valley](https://vincentalboyer.github.io/Course-Apps/peak-and-valley/) | Exhaustive vs. local search vs. greedy |
 
-Browser versions of the optimization minigames are published on GitHub Pages at
-**https://vincentalboyer.github.io/MyStreamlitApp/**: Greedy Bin Packing, GA Word Game,
-Tabu Search, and Peak and Valley (the web name of Exhaustive vs. Local Search). They run
-entirely in the browser, so a whole class can play at once, and game codes give the
-same games as the Streamlit versions. Source and details are in [website](website).
+Source and details are in [`website/`](website).
 
-## Getting Started
+## Streamlit apps (no longer maintained)
 
-Each app is self-contained; install its `requirements.txt` and run it directly with Streamlit, e.g.:
-```bash
-pip install -r ERP_App/requirements.txt
-streamlit run ERP_App/app.py
-```
+> ⚠️ The Streamlit apps in [`streamlit-apps/`](streamlit-apps) are **no longer
+> maintained**. They are kept for reference and still run, but they won't
+> receive fixes or updates. Four of them have a web version above, which gives
+> the same games for the same game codes.
 
-```bash
-streamlit run Greedy_BinPacking_App/app.py
-streamlit run ExhaustiveVsLocalSearch_App/app.py
-streamlit run GA_WordGame_App/app.py
-streamlit run TabuSearch_GridGame_App/app.py
-streamlit run EGEL-Area2/streamlit_app.py
-streamlit run Kids_MathWriting_App/app.py
+| App | Web version |
+|---|---|
+| [`Greedy_BinPacking_App`](streamlit-apps/Greedy_BinPacking_App) | [Greedy Bin Packing](https://vincentalboyer.github.io/Course-Apps/binpacking/) |
+| [`GA_WordGame_App`](streamlit-apps/GA_WordGame_App) | [GA Word Game](https://vincentalboyer.github.io/Course-Apps/ga-wordgame/) |
+| [`TabuSearch_GridGame_App`](streamlit-apps/TabuSearch_GridGame_App) | [Tabu Search](https://vincentalboyer.github.io/Course-Apps/tabu-search/) |
+| [`ExhaustiveVsLocalSearch_App`](streamlit-apps/ExhaustiveVsLocalSearch_App) | [Peak and Valley](https://vincentalboyer.github.io/Course-Apps/peak-and-valley/) |
+| [`ERP_App`](streamlit-apps/ERP_App) | — |
+| [`EGEL-Area2`](streamlit-apps/EGEL-Area2) | — |
+| [`Kids_MathWriting_App`](streamlit-apps/Kids_MathWriting_App) | — |
+| [`Project_Scheduling_App`](streamlit-apps/Project_Scheduling_App) | — |
+
+Older, retired apps are in [`streamlit-apps/Archive`](streamlit-apps/Archive).
+See [`streamlit-apps/README.md`](streamlit-apps/README.md) for what each app
+does and how to run it.
+
+## Layout
+
+```text
+website/          the maintained website (GitHub Pages)
+streamlit-apps/   Streamlit apps, no longer maintained
+  Archive/        older, retired apps
+  tests/          tests for the Streamlit game logic
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

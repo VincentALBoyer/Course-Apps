@@ -1,6 +1,6 @@
 # Greedy Bin Packing — web version
 
-Static port of [`Greedy_BinPacking_App`](../../Greedy_BinPacking_App), served
+Static port of [`Greedy_BinPacking_App`](../../streamlit-apps/Greedy_BinPacking_App), served
 at `/binpacking/` on the [minigames website](../README.md).
 
 - **Game:** drag items into the bin over 5 rounds, then download your

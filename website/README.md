@@ -1,7 +1,7 @@
 # Optimization Minigames website
 
 Static (HTML/CSS/JavaScript) versions of the classroom minigames, published
-on GitHub Pages at **https://vincentalboyer.github.io/MyStreamlitApp/**.
+on GitHub Pages at **https://vincentalboyer.github.io/Course-Apps/**.
 
 Everything runs in each student's browser, so a whole class playing at once
 puts no load on any server. There is nothing to install and no sign-in.
@@ -9,13 +9,13 @@ puts no load on any server. There is nothing to install and no sign-in.
 | Path | Game | Ported from |
 |---|---|---|
 | `/` | Home page with a card for each game | — |
-| `/binpacking/` | 📦 Greedy Bin Packing | [`Greedy_BinPacking_App`](../Greedy_BinPacking_App) |
-| `/ga-wordgame/` | 🧬 GA Word Game | [`GA_WordGame_App`](../GA_WordGame_App) |
-| `/tabu-search/` | 🔀 Tabu Search: The Grid Game | [`TabuSearch_GridGame_App`](../TabuSearch_GridGame_App) |
-| `/peak-and-valley/` | ⛰️ Peak and Valley | [`ExhaustiveVsLocalSearch_App`](../ExhaustiveVsLocalSearch_App) |
+| `/binpacking/` | 📦 Greedy Bin Packing | [`Greedy_BinPacking_App`](../streamlit-apps/Greedy_BinPacking_App) |
+| `/ga-wordgame/` | 🧬 GA Word Game | [`GA_WordGame_App`](../streamlit-apps/GA_WordGame_App) |
+| `/tabu-search/` | 🔀 Tabu Search: The Grid Game | [`TabuSearch_GridGame_App`](../streamlit-apps/TabuSearch_GridGame_App) |
+| `/peak-and-valley/` | ⛰️ Peak and Valley | [`ExhaustiveVsLocalSearch_App`](../streamlit-apps/ExhaustiveVsLocalSearch_App) |
 
-Old bin packing links (`…/MyStreamlitApp/#game`, `#challenge`, `#scoring`)
-redirect to `/binpacking/`.
+Home page links ending in `#game`, `#challenge` or `#scoring` (the old bin
+packing links) open that mode of `/binpacking/`.
 
 ## Same game codes as the Streamlit apps
 
