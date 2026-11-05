@@ -93,14 +93,12 @@
     return best;
   }
 
+  /** Once every point is revealed the round pauses (see renderPlaying) so
+   * students can look at the full landscape before the results screen. */
   function revealExhaustive(x) {
-    const ys = ysNow();
-    S.revealed.set(x, ys[x]);
-    if (S.revealed.size === ys.length) {
-      const bx = argminRevealed();
-      finishRound(bx, S.revealed.get(bx));
-    }
+    S.revealed.set(x, ysNow()[x]);
   }
+  const exhaustiveDone = () => S.mode === "exhaustive" && S.revealed.size === ysNow().length;
 
   function revealAround(x) {
     const ys = ysNow();
@@ -161,18 +159,43 @@
       recordIfStuck();
     } else {
       const improving = improvingNow();
-      if (!improving.size) return; // stuck: the round is decided by the buttons below
-      if (!improving.has(x)) {
+      if (!improving.size) {
+        // Stuck with restarts left: clicking a point restarts from there
+        // (no separate "Restart" button press needed).
+        if (!canRestart()) return;
+        restartLocalSearch();
+        startLocalSearch(x);
+        recordIfStuck();
+      } else if (!improving.has(x)) {
         MG.toast("⚠️ That point isn't a strictly better neighbor — pick a highlighted point instead.");
         return;
+      } else {
+        revealAround(x);
+        recordIfStuck();
       }
-      revealAround(x);
-      recordIfStuck();
     }
     render();
   }
 
   // ── rendering ────────────────────────────────────────────────────────
+  /** Chart height that fits the window: everything stays above the fold
+   * on a laptop (e.g. 1366x768) without wasting space on taller screens. */
+  function chartHeight(el) {
+    // Fill what's left of the window below the chart's top edge, so the
+    // whole board is visible at any screen size or browser zoom.
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    return Math.round(Math.max(260, Math.min(560, window.innerHeight - top - 16)));
+  }
+  function plotFitted(el, fig) {
+    fig.layout.height = chartHeight(el);
+    MG.plot(el, fig.data, fig.layout, { displayModeBar: false });
+  }
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (S.phase === "playing" || S.phase === "debrief") render(); }, 150);
+  });
+
   const metric = (label, value) => `<div><div class="metric-label">${esc(label)}</div><div class="metric-value">${esc(value)}</div></div>`;
   const f2 = (v) => v.toFixed(2);
 
@@ -180,7 +203,7 @@
     const idx = S.roundIdx;
     const xmax = xmaxNow();
     const n = xmax + 1;
-    $("round-title").textContent = `Round ${idx + 1} / ${TOTAL_ROUNDS} — x from 0 to ${xmax} (${n} points)`;
+    $("round-title").textContent = `Round ${idx + 1} / ${TOTAL_ROUNDS} · ${n} points (x = 0 to ${xmax})`;
     $("m-strategy").textContent = STRATEGY_LABELS[S.mode];
     $("m-score").textContent = String(S.roundResults.reduce((s, r) => s + r.score, 0));
     updateClock();
@@ -192,7 +215,12 @@
       const bestX = S.revealed.size ? argminRevealed() : null;
       fig = P.liveChart(xmax, S.revealed, "exhaustive", { bestX });
       panel.push(`<div class="metrics">${metric("Evaluations", `${S.revealed.size} / ${n}`)}${metric("Best so far", S.revealed.size ? f2(minRevealed()) : "—")}</div>`);
-      panel.push(`<p class="caption">Click any unrevealed point on the chart to evaluate f(x) there — every point must be checked.</p>`);
+      if (exhaustiveDone()) {
+        panel.push(`<div class="alert success">🏁 All ${n} points evaluated. The best is f=${f2(minRevealed())} at x=${bestX}: guaranteed to be the global optimum. Round complete!</div>`);
+        panel.push(`<button class="btn primary" data-act="see-results">See round results ▶</button>`);
+      } else {
+        panel.push(`<p class="caption">Click any unrevealed point on the chart to evaluate f(x) there — every point must be checked.</p>`);
+      }
     } else if (S.mode === "greedy") {
       fig = P.liveChart(xmax, S.revealed, "greedy");
       panel.push(`<p class="caption">Click any point on the chart — that's your final answer, no comparison, no take-backs.</p>`);
@@ -217,12 +245,14 @@
         const by = S.lsBestY;
         const left = S.maxRestarts - S.lsRestartsUsed;
         if (canRestart()) {
-          panel.push(`<div class="alert warning">🪤 Attempt ${S.lsRestartsUsed + 1} reached a local optimum at x=${cx} (f=${f2(cy)}). Best result so far: f=${f2(by)} at x=${bx}. ${left} restart(s) left.</div>`);
-          panel.push(`<div class="row"><button class="btn" data-act="restart-ls">🔄 Restart from a new point</button><button class="btn primary" data-act="accept-best">🏁 Accept best result (f=${f2(by)})</button></div>`);
+          panel.push(`<div class="alert warning">🪤 Attempt ${S.lsRestartsUsed + 1} is stuck at a local optimum (x=${cx}). ${left} restart${left > 1 ? "s" : ""} left: <b>click any point to restart there</b>, or keep your best.</div>`);
+          panel.push(`<button class="btn primary" data-act="accept-best">🏁 Accept best (f=${f2(by)})</button>`);
         } else {
+          // Stuck with no restarts left: pause here (whatever the restart
+          // setting) so the trap is visible before the results screen.
           panel.push(bx === cx
-            ? `<div class="alert success">🏁 Local optimum reached at x=${cx} (f=${f2(cy)}) — neither neighbor is better. Round complete!</div>`
-            : `<div class="alert success">🏁 Local optimum reached at x=${cx} (f=${f2(cy)}). Your best across all attempts was f=${f2(by)} at x=${bx} — that's what counts. Round complete!</div>`);
+            ? `<div class="alert success">🏁 Local optimum reached at x=${cx} (f=${f2(cy)}): neither neighbor is better. Round complete!</div>`
+            : `<div class="alert success">🏁 Local optimum reached at x=${cx} (f=${f2(cy)}). Your best attempt, f=${f2(by)} at x=${bx}, is what counts. Round complete!</div>`);
           panel.push(`<button class="btn primary" data-act="accept-best">See round results ▶</button>`);
         }
       } else {
@@ -230,7 +260,7 @@
       }
     }
     $("play-panel").innerHTML = panel.join("");
-    MG.plot($("live-chart"), fig.data, fig.layout, { displayModeBar: false });
+    plotFitted($("live-chart"), fig);
   }
 
   // Chart clicks are resolved here rather than with plotly_click, which
@@ -281,9 +311,6 @@
       alert.className = "alert warning";
       alert.innerHTML = `🪤 You landed on a <strong>local optimum</strong> at x=${px}. The global minimum was at x=${g}.`;
     }
-    const fig = P.debriefChart(ys, g, locals, px);
-    MG.plot($("debrief-chart"), fig.data, fig.layout, { displayModeBar: false });
-
     const ms = [
       metric("Evaluations used", `${r.evaluations} / ${r.n_points}`),
       metric("Quality", fmt0(r.quality * 100) + "%"),
@@ -294,6 +321,8 @@
     $("debrief-metrics").innerHTML = ms.join("");
     $("debrief-time").textContent = `Round time: ${r.time.toFixed(1)}s`;
     $("next-round").textContent = idx < TOTAL_ROUNDS - 1 ? "Next Round ▶" : "See Final Results 🏁";
+    // Plot last: the chart's height depends on how tall the strip above it ended up.
+    plotFitted($("debrief-chart"), P.debriefChart(ys, g, locals, px, [...S.revealed.keys()]));
   }
 
   function renderFinal() {
@@ -324,8 +353,9 @@
 
   function render() {
     for (const p of ["intro", "playing", "debrief", "final"]) $("phase-" + p).hidden = S.phase !== p;
-    $("status-panel").hidden = S.phase === "intro";
-    $("side-code").textContent = S.gameCode;
+    // Game screens take the full width; the Concepts panel flows below.
+    document.querySelector("main").classList.toggle("pv-wide", S.phase !== "intro");
+    document.querySelectorAll(".js-code").forEach((el) => { el.textContent = S.gameCode; });
     if (S.phase === "playing") renderPlaying();
     else if (S.phase === "debrief") renderDebrief();
     else if (S.phase === "final") renderFinal();
@@ -356,6 +386,7 @@
     if (S.phase !== "playing") return;
     if (act === "restart-ls") restartLocalSearch();
     else if (act === "accept-best" && S.lsBestX !== null) finishRound(S.lsBestX, S.lsBestY);
+    else if (act === "see-results" && exhaustiveDone()) { const bx = argminRevealed(); finishRound(bx, S.revealed.get(bx)); }
     else return;
     render();
   });
@@ -363,7 +394,9 @@
   $("next-round").addEventListener("click", () => { nextRoundOrFinish(); render(); window.scrollTo({ top: 0 }); });
   $("replay-same").addEventListener("click", () => { startGame(S.gameCode, S.mode, S.neighborhoodN, S.maxRestarts); render(); });
   $("replay-new").addEventListener("click", () => { startGame("", S.mode, S.neighborhoodN, S.maxRestarts); render(); });
-  $("restart").addEventListener("click", () => { S.phase = "intro"; render(); });
+  document.querySelectorAll(".js-restart").forEach((b) => b.addEventListener("click", () => {
+    S.phase = "intro"; render(); window.scrollTo({ top: 0 });
+  }));
 
   MG.theme.onChange(() => { if (S.phase === "playing" || S.phase === "debrief") render(); });
   window.addEventListener("beforeunload", (e) => { if (S.phase === "playing" || S.phase === "debrief") e.preventDefault(); });

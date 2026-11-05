@@ -221,3 +221,115 @@ tr:last-child td { border-bottom: none; }
 .balloon { position: fixed; bottom: -60px; font-size: 40px; z-index: 60; pointer-events: none; animation: balloon-rise 3.2s ease-in forwards; }
 @keyframes balloon-rise { to { transform: translateY(-115vh) rotate(8deg); opacity: 0.85; } }
 @media (prefers-reduced-motion: reduce) { .balloon { display: none; } }
+
+/* ── Intro pages (shared by the game start screens) ──────────────────── */
+.intro { max-width: 980px; }
+.intro-hero {
+  display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 32px; align-items: center;
+  padding: 24px 28px; margin: 8px 0 8px;
+  border: 1px solid var(--border); border-radius: 14px;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
+}
+.intro-hero.no-art { grid-template-columns: 1fr; }
+.intro-eyebrow {
+  margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--accent);
+}
+.intro-lead { margin: 0; font-size: 1.12rem; line-height: 1.6; }
+.intro-art { width: 100%; height: auto; display: block; }
+@media (max-width: 640px) {
+  .intro-hero { grid-template-columns: 1fr; padding: 18px; gap: 18px; }
+  .intro-art { max-width: 220px; }
+}
+.intro-heading {
+  margin: 28px 0 12px; font-size: 0.85rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+.intro-heading .optional { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* Step cards ("How it works"). */
+.intro-steps {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+}
+.intro-steps.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .intro-steps, .intro-steps.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .intro-steps, .intro-steps.three { grid-template-columns: 1fr; } }
+.intro-steps li {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  font-size: 14px; line-height: 1.5; color: var(--muted);
+}
+.intro-steps li strong { color: var(--text); font-size: 15px; }
+.intro-steps li b { color: var(--text); }
+.step-icon {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--surface-2); font-size: 18px; margin-bottom: 2px;
+}
+
+/* Mode / option cards. */
+.intro-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.intro-modes.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .intro-modes.three { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .intro-modes { grid-template-columns: 1fr; } }
+.mode-card {
+  display: flex; flex-direction: column; gap: 10px; padding: 18px 20px;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mode-card:hover { border-color: var(--muted); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08); }
+.mode-card.hard { border-color: var(--accent); background: linear-gradient(160deg, var(--error-bg) 0%, var(--bg) 60%); }
+.mode-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mode-name { font-size: 1.25rem; font-weight: 700; }
+.mode-badge {
+  font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-text);
+}
+.mode-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.mode-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.mode-facts li span { color: var(--muted); }
+.mode-desc { margin: 0; font-size: 14px; color: var(--muted); flex: 1; }
+.mode-card .btn { margin: 4px 0 0; padding: 10px 16px; }
+.mode-card:not(.hard) .btn.primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+/* A mode card that is a radio choice: <label class="mode-card choice"><input type="radio">… */
+.mode-card.choice { cursor: pointer; position: relative; }
+.mode-card.choice > input { position: absolute; opacity: 0; pointer-events: none; }
+.mode-card.choice .mode-check {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0;
+  display: grid; place-items: center; transition: border-color 0.15s;
+}
+.mode-card.choice:has(input:checked) {
+  border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
+  background: linear-gradient(160deg, var(--error-bg) 0%, var(--bg) 55%);
+}
+.mode-card.choice:has(input:checked) .mode-check { border-color: var(--accent); }
+.mode-card.choice:has(input:checked) .mode-check::after {
+  content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+}
+.mode-card.choice:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Boxed form area. */
+.tool-card { padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+.tool-card .field { margin-bottom: 4px; }
+.tool-card .alert:last-child { margin-bottom: 0; }
+.tool-card input[type="file"]::file-selector-button {
+  font: inherit; font-size: 14px; margin-right: 12px; padding: 7px 14px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--text);
+}
+.tool-card input[type="file"]::file-selector-button:hover { border-color: var(--muted); }
+
+/* On/off switch built on a checkbox (keyboard + screen reader friendly). */
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+  width: 40px; height: 22px; border-radius: 999px; position: relative; flex-shrink: 0;
+  background: var(--surface-2); border: 1px solid var(--border); transition: background 0.15s;
+}
+.switch-track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--muted); transition: transform 0.15s, background 0.15s;
+}
+.switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .switch-track::after { transform: translateX(18px); background: var(--accent-text); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }

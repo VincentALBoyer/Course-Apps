@@ -1,0 +1,81 @@
+/* Peak and Valley only — shared intro components live in ../shared/base.css. */
+
+/* Hero landscape: same marker colors as the game's charts (js/plotting.js). */
+.pv-art .pv-curve { fill: none; stroke: #898781; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.pv-art .pv-hidden { fill: none; stroke: #c3c2b7; stroke-width: 2; stroke-dasharray: 4 4; stroke-linejoin: round; }
+.pv-art .pv-dot { fill: #898781; stroke: var(--bg); stroke-width: 1.5; }
+.pv-art .pv-open { fill: none; stroke: #c3c2b7; stroke-width: 1.5; }
+.pv-art .pv-local { fill: #fab219; stroke: var(--bg); stroke-width: 1; }
+.pv-art .pv-ring { fill: none; stroke: #2a78d6; stroke-width: 2.5; }
+.pv-art .pv-global { fill: #0ca30c; stroke: var(--bg); stroke-width: 1; }
+
+/* Strategy cards: keep the facts readable in three narrow columns. */
+.intro-modes.three .mode-facts li b { text-align: right; }
+
+/* Local search settings (shown only when Local search is picked). */
+.pv-advanced { margin-top: 16px; }
+.pv-card-title { margin: 0 0 4px; font-weight: 700; }
+.pv-advanced-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 32px; }
+@media (max-width: 640px) { .pv-advanced-grid { grid-template-columns: 1fr; } }
+.pv-advanced .segmented { margin-bottom: 4px; }
+.pv-advanced .field { max-width: none; margin-bottom: 4px; }
+
+/* 65 / 35 score split. */
+.pv-score-bar {
+  display: flex; height: 34px; border-radius: 999px; overflow: hidden; margin-bottom: 12px;
+  font-size: 13px; font-weight: 700;
+}
+.pv-score-bar span { display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.pv-score-bar .pv-q { flex: 65; background: var(--accent); color: var(--accent-text); }
+.pv-score-bar .pv-e { flex: 35; background: var(--info-bg); color: var(--info-text); }
+
+/* Scoring and Start side by side on laptop-width screens. */
+.pv-bottom { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0 16px; }
+.pv-bottom > div { display: flex; flex-direction: column; }
+.pv-bottom .tool-card { flex: 1; }
+@media (max-width: 1100px) { .pv-bottom { grid-template-columns: 1fr; } }
+.pv-start { display: flex; flex-direction: column; gap: 8px; }
+.pv-start .field { margin: 0; max-width: none; }
+.pv-start .btn { margin: 4px 0 0; padding: 10px 22px; align-self: flex-start; }
+
+/* ── Laptop-friendly intro: tighter vertical rhythm ─────────────────── */
+#phase-intro h1 { margin-top: 16px; }
+#phase-intro .intro-hero { padding: 18px 24px; }
+#phase-intro .intro-art { max-height: 130px; }
+#phase-intro .intro-heading { margin: 20px 0 10px; }
+/* Step cards: icon beside the title instead of above it. */
+#phase-intro .intro-steps li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 2px 12px; padding: 12px 14px; }
+#phase-intro .intro-steps .step-icon { grid-row: span 2; margin: 0; }
+
+/* ── Game screens: full width, wide-and-short chart ─────────────────── */
+/* During play/results the board gets the whole width; Concepts moves below. */
+main.with-aside.pv-wide { grid-template-columns: minmax(0, 1fr); }
+main.with-aside.pv-wide > aside { position: static; max-width: 980px; margin-top: 8px; }
+
+.pv-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; margin: 12px 0 4px; }
+.pv-head h2 { margin: 0; font-size: 1.25rem; }
+.pv-head-metrics { display: flex; align-items: center; gap: 8px 28px; flex-wrap: wrap; }
+.pv-head-metrics .metric-value { font-size: 1.1rem; line-height: 1.2; }
+.pv-head-metrics .metric-label { font-size: 12px; }
+.pv-head-metrics .btn { margin: 0; }
+
+/* One horizontal strip above the chart: stats, instruction, buttons. */
+.pv-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  padding: 10px 16px; margin: 8px 0 4px;
+}
+.pv-strip:empty { display: none; }
+.pv-strip .metrics { display: flex; flex-wrap: wrap; gap: 6px 28px; margin: 0; }
+.pv-strip .metric-value { font-size: 1.15rem; line-height: 1.25; }
+.pv-strip .metric-label { font-size: 12px; }
+.pv-strip .caption { margin: 0; flex: 1 1 260px; }
+.pv-strip .alert { margin: 0; flex: 1 1 320px; font-size: 14px; padding: 8px 12px; }
+.pv-strip .btn { margin: 0; }
+.pv-strip .row { gap: 8px; }
+/* The strip's action button always sits at the right end (same spot for
+ * "See round results", "Accept best result" and "Next Round"). */
+.pv-strip > .btn:last-child { margin-left: auto; }
+/* Results strip: let the round time size to its text so the button fits on the row. */
+#debrief-time { flex: 0 0 auto; }
+#phase-debrief .pv-strip .alert { flex: 1 1 240px; }
