@@ -133,6 +133,10 @@
     }
 
     function render(next) {
+      // Normal drops end the drag before re-rendering, so a drag still in
+      // flight here belongs to a board that was swapped out (e.g. the
+      // stopwatch ran out mid-drag): drop it so it can't land in the new round.
+      if (drag) endDrag();
       data = next;
       binWrapEl.style.width = data.bin_w * CELL + "px";
       binWrapEl.style.height = data.bin_h * CELL + "px";

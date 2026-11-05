@@ -43,6 +43,31 @@ textarea { resize: vertical; max-width: 90ch; }
 .code-card #class-code { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .code-card #class-code::placeholder { text-transform: none; letter-spacing: 0; font-weight: 400; }
 @media (max-width: 640px) { .code-card { grid-template-columns: 1fr; } }
+.settings-card { display: grid; gap: 16px; }
+.settings-card > .code-card + .code-card { padding-top: 16px; border-top: 1px dashed var(--border); }
+.timer-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.timer-field { margin: 0; width: 130px; }
+.timer-field input:disabled { opacity: 0.5; }
+
+/* On/off switch built on a checkbox (keyboard + screen reader friendly). */
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch-track {
+  width: 40px; height: 22px; border-radius: 999px; position: relative; flex-shrink: 0;
+  background: var(--surface-2); border: 1px solid var(--border); transition: background 0.15s;
+}
+.switch-track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--muted); transition: transform 0.15s, background 0.15s;
+}
+.switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .switch-track::after { transform: translateX(18px); background: var(--accent-text); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Countdown metric: red and pulsing in the last 10 seconds. */
+.metric.time-low .metric-value { color: var(--error-text); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .metric.time-low .metric-value { animation: none; } }
 
 /* Boxed form area for Challenge / Scoring controls. */
 .tool-card {
