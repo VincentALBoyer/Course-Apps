@@ -29,6 +29,20 @@
   const CHALLENGE_ITEM_COUNT_BASE = 6;
   const CHALLENGE_ITEM_COUNT_GROWTH = 1.6;
 
+  // Game-mode hard variant: a bigger fixed bin, more items, and an item
+  // area that always exceeds the bin's area, so in every round some items
+  // must be left out and the choice of what to skip matters.
+  const HARD_BIN_WIDTH = 26;
+  const HARD_BIN_HEIGHT = 18;
+  const HARD_BASE_ITEM_COUNT = 10;
+  const HARD_ITEM_COUNT_STEP = 3;
+  const HARD_BASE_AREA_FRACTION = 1.3;
+  const HARD_AREA_FRACTION_STEP = 0.12;
+  // Rounding/clamping can shrink the realized area; redraw until the total
+  // is at least this multiple of the bin area (strictly > 1 => can't all fit).
+  const HARD_MIN_OVERFILL = 1.1;
+  const HARD_MAX_ATTEMPTS = 50;
+
   function binSizeForDifficulty(difficulty, baseW = BIN_WIDTH, baseH = BIN_HEIGHT) {
     const scale = 1 + (difficulty - 1) * BIN_GROWTH_STEP;
     return [Math.max(baseW, pyRound(baseW * scale)), Math.max(baseH, pyRound(baseH * scale))];
@@ -53,11 +67,14 @@
     );
   }
 
-  /** Item: {id, w, h, profit, color}. */
-  function generateItems(difficulty, rng, binW = BIN_WIDTH, binH = BIN_HEIGHT, n = null) {
+  /** Item: {id, w, h, profit, color}. areaFraction overrides the
+   * difficulty-based target (used by hard mode only; Challenge instances
+   * keep the default so seeds stay reproducible). */
+  function generateItems(difficulty, rng, binW = BIN_WIDTH, binH = BIN_HEIGHT, n = null, areaFraction = null) {
     const binArea = binW * binH;
     if (n === null) n = Math.max(1, pyRound(BASE_ITEM_COUNT + (difficulty - 1) * ITEM_COUNT_STEP));
-    const targetArea = binArea * (BASE_AREA_FRACTION + (difficulty - 1) * AREA_FRACTION_STEP);
+    if (areaFraction === null) areaFraction = BASE_AREA_FRACTION + (difficulty - 1) * AREA_FRACTION_STEP;
+    const targetArea = binArea * areaFraction;
     const avgItemArea = targetArea / n;
     const variance = BASE_VARIANCE + VARIANCE_STEP * (difficulty - 1);
 
@@ -97,11 +114,27 @@
     return out;
   }
 
-  /** Game-mode round. Difficulty == roundIdx (1-5), fixed bin. */
-  function generateRound(roundIdx, rng) {
-    const items = generateItems(roundIdx, rng);
+  const totalArea = (items) => items.reduce((s, it) => s + it.w * it.h, 0);
+
+  /** Hard-mode items: total area always exceeds the bin, so not all fit. */
+  function generateHardItems(roundIdx, rng) {
+    const binArea = HARD_BIN_WIDTH * HARD_BIN_HEIGHT;
+    const n = HARD_BASE_ITEM_COUNT + (roundIdx - 1) * HARD_ITEM_COUNT_STEP;
+    const fraction = HARD_BASE_AREA_FRACTION + (roundIdx - 1) * HARD_AREA_FRACTION_STEP;
+    let items;
+    for (let attempt = 0; attempt < HARD_MAX_ATTEMPTS; attempt++) {
+      items = generateItems(roundIdx, rng, HARD_BIN_WIDTH, HARD_BIN_HEIGHT, n, fraction);
+      if (totalArea(items) >= binArea * HARD_MIN_OVERFILL) return items;
+    }
+    return items; // practically unreachable with these parameters
+  }
+
+  /** Game-mode round. Difficulty == roundIdx (1-5), fixed bin per mode. */
+  function generateRound(roundIdx, rng, hard = false) {
+    const items = hard ? generateHardItems(roundIdx, rng) : generateItems(roundIdx, rng);
     return {
-      round_idx: roundIdx, bin_w: BIN_WIDTH, bin_h: BIN_HEIGHT,
+      round_idx: roundIdx, hard,
+      bin_w: hard ? HARD_BIN_WIDTH : BIN_WIDTH, bin_h: hard ? HARD_BIN_HEIGHT : BIN_HEIGHT,
       items: items.slice(), // not yet placed
       all_items: items, // full original set, never mutated
       placed: [], // {item, x, y, rotated}
@@ -161,8 +194,8 @@
   }
 
   BP.game = {
-    BIN_WIDTH, BIN_HEIGHT,
-    binSizeForDifficulty, challengeItemCount, profitColor,
+    BIN_WIDTH, BIN_HEIGHT, HARD_BIN_WIDTH, HARD_BIN_HEIGHT,
+    binSizeForDifficulty, totalArea, challengeItemCount, profitColor,
     generateItems, generateInstance, generateInstances, generateRound,
     placedW, placedH, rectsOverlap,
     placeItem, movePlacedItem, removePlacedItem,
