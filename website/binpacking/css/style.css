@@ -1,43 +1,21 @@
-/* Bin packing only — everything else comes from ../shared/base.css. */
+/* Bin packing only — shared intro components (hero, step and mode cards,
+ * tool card, switch) live in ../shared/base.css. */
 
 .inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 900px; }
 @media (max-width: 640px) { .inputs { grid-template-columns: 1fr; } }
 .inputs .field { max-width: none; }
+.tool-card .inputs { margin-bottom: 4px; }
 textarea { resize: vertical; max-width: 90ch; }
 
-/* ── Game intro ────────────────────────────────────────────────────── */
-.intro { max-width: 980px; }
-.intro-hero {
-  display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 32px; align-items: center;
-  padding: 24px 28px; margin: 8px 0 8px;
-  border: 1px solid var(--border); border-radius: 14px;
-  background: linear-gradient(135deg, var(--surface) 0%, var(--bg) 100%);
-}
-.intro-eyebrow {
-  margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--accent);
-}
-.intro-lead { margin: 0; font-size: 1.12rem; line-height: 1.6; }
-.intro-art { width: 100%; height: auto; display: block; }
+/* ── Game intro (bin-packing-specific parts) ───────────────────────── */
 .intro-art .art-bin { fill: #fff; stroke: var(--bin-frame); stroke-width: 3; }
-@media (max-width: 640px) {
-  .intro-hero { grid-template-columns: 1fr; padding: 18px; gap: 18px; }
-  .intro-art { max-width: 220px; }
+.profit-scale {
+  height: 8px; border-radius: 999px; margin-top: auto;
+  background: linear-gradient(90deg, #fff3b0, #b3261e);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.intro-heading {
-  margin: 28px 0 12px; font-size: 0.85rem; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
-}
-.intro-steps {
-  list-style: none; margin: 0; padding: 0; counter-reset: step;
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
-}
-.intro-steps.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 900px) { .intro-steps, .intro-steps.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 520px) { .intro-steps, .intro-steps.three { grid-template-columns: 1fr; } }
-.intro-hero.no-art { grid-template-columns: 1fr; }
-.intro-heading .optional { text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* Class settings: code + stopwatch. */
 .code-card { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 8px 24px; align-items: end; }
 .code-card .field { margin: 0; }
 .code-card #class-code { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
@@ -49,78 +27,10 @@ textarea { resize: vertical; max-width: 90ch; }
 .timer-field { margin: 0; width: 130px; }
 .timer-field input:disabled { opacity: 0.5; }
 
-/* On/off switch built on a checkbox (keyboard + screen reader friendly). */
-.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
-.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.switch-track {
-  width: 40px; height: 22px; border-radius: 999px; position: relative; flex-shrink: 0;
-  background: var(--surface-2); border: 1px solid var(--border); transition: background 0.15s;
-}
-.switch-track::after {
-  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
-  background: var(--muted); transition: transform 0.15s, background 0.15s;
-}
-.switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
-.switch input:checked + .switch-track::after { transform: translateX(18px); background: var(--accent-text); }
-.switch input:focus-visible + .switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }
-
 /* Countdown metric: red and pulsing in the last 10 seconds. */
 .metric.time-low .metric-value { color: var(--error-text); animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .metric.time-low .metric-value { animation: none; } }
-
-/* Boxed form area for Challenge / Scoring controls. */
-.tool-card {
-  padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
-}
-.tool-card .inputs { margin-bottom: 4px; }
-.tool-card .field { margin-bottom: 4px; }
-.tool-card .alert:last-child { margin-bottom: 0; }
-.tool-card input[type="file"]::file-selector-button {
-  font: inherit; font-size: 14px; margin-right: 12px; padding: 7px 14px; cursor: pointer;
-  border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-2); color: var(--text);
-}
-.tool-card input[type="file"]::file-selector-button:hover { border-color: var(--muted); }
-.intro-steps li {
-  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
-  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
-  font-size: 14px; line-height: 1.5; color: var(--muted);
-}
-.intro-steps li strong { color: var(--text); font-size: 15px; }
-.intro-steps li b { color: var(--text); }
-.step-icon {
-  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
-  background: var(--surface-2); font-size: 18px; margin-bottom: 2px;
-}
-.profit-scale {
-  height: 8px; border-radius: 999px; margin-top: auto;
-  background: linear-gradient(90deg, #fff3b0, #b3261e);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.intro-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-@media (max-width: 640px) { .intro-modes { grid-template-columns: 1fr; } }
-.mode-card {
-  display: flex; flex-direction: column; gap: 10px; padding: 18px 20px;
-  border: 1px solid var(--border); border-radius: 14px; background: var(--bg);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.mode-card:hover { border-color: var(--muted); box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08); }
-.mode-card.hard { border-color: var(--accent); background: linear-gradient(160deg, var(--error-bg) 0%, var(--bg) 60%); }
-.mode-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.mode-name { font-size: 1.25rem; font-weight: 700; }
-.mode-badge {
-  font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
-  background: var(--accent); color: var(--accent-text);
-}
-.mode-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
-.mode-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px dashed var(--border); }
-.mode-facts li span { color: var(--muted); }
-.mode-desc { margin: 0; font-size: 14px; color: var(--muted); flex: 1; }
-.mode-card .btn { margin: 4px 0 0; padding: 10px 16px; }
-/* Normal mode's button is the quieter of the two primaries. */
-.mode-card:not(.hard) .btn.primary { background: var(--text); border-color: var(--text); color: var(--bg); }
 
 /* ── Board ─────────────────────────────────────────────────────────── */
 .board-scroll { overflow-x: auto; padding-bottom: 4px; }

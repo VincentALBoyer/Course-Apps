@@ -80,7 +80,8 @@
     return { data, layout };
   }
 
-  function debriefChart(ys, globalIdx, localIdxs, playerX) {
+  /** exploredXs: every x the player evaluated this round (all attempts). */
+  function debriefChart(ys, globalIdx, localIdxs, playerX, exploredXs = []) {
     const n = ys.length;
     const xs = [...Array(n).keys()];
     const data = [{
@@ -88,6 +89,14 @@
       marker: { size: 9, color: COLOR_CONTEXT, symbol: "circle" },
       name: "Function values", hovertemplate: "x=%{x}<br>f(x)=%{y:.2f}<extra></extra>",
     }];
+    if (exploredXs.length) {
+      const ex = [...exploredXs].sort((a, b) => a - b);
+      data.push({
+        type: "scatter", mode: "markers", x: ex, y: ex.map((i) => ys[i]),
+        marker: { size: 17, color: COLOR_CANDIDATE, symbol: "circle-open", line: { width: 2.5 } },
+        name: `Explored (${ex.length})`, hovertemplate: "x=%{x}<br>f(x)=%{y:.2f}<br>you evaluated this point<extra></extra>",
+      });
+    }
     if (localIdxs.length) {
       data.push({
         type: "scatter", mode: "markers", x: localIdxs, y: localIdxs.map((i) => ys[i]),
