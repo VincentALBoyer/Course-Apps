@@ -33,94 +33,188 @@
   <main class="with-aside">
     <div>
       <!-- ─────────────────────────── Setup ─────────────────────────── -->
-      <section id="phase-setup">
+      <section id="phase-setup" class="intro">
         <h1>🔀 Tabu Search: The Grid Game</h1>
-        <p class="subtitle">A hands-on Tabu Search minigame for IN2041 - Metaheuristics</p>
-        <div class="prose">
-          <p>Build a <strong>connected path</strong> of cells on the grid — up, down, left, right, no diagonals, no
-          revisits — that <strong>maximizes the sum</strong> of the values it passes through. Then improve it with
-          a <strong>swap</strong>: trade one cell in your path for one cell outside it, keeping the path connected.
-          A <strong>tabu list</strong> remembers your recent swaps and forbids reversing them for a few iterations —
-          the mechanism that lets you escape a local optimum instead of cycling straight back to it.</p>
+        <div class="intro-hero">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">Tabu search · build, swap, remember</p>
+            <p class="intro-lead">Build a <strong>connected path</strong> of cells (up, down, left, right, no revisits)
+              that <strong>maximizes the sum</strong> of its values. Then improve it one swap at a time, while a
+              <strong>tabu list</strong> stops you from undoing your recent moves, so you can escape a local optimum
+              instead of cycling straight back to it.</p>
+          </div>
+          <svg class="intro-art ts-art" viewBox="0 0 200 140" role="img" aria-label="A path on a grid with one cell leaving, one arriving and one tabu cell">
+            <g class="ts-art-grid">
+              <rect x="10" y="10" width="28" height="28" rx="5" /><rect x="42" y="10" width="28" height="28" rx="5" /><rect x="74" y="10" width="28" height="28" rx="5" /><rect x="106" y="10" width="28" height="28" rx="5" /><rect x="138" y="10" width="28" height="28" rx="5" />
+              <rect x="10" y="42" width="28" height="28" rx="5" /><rect x="138" y="42" width="28" height="28" rx="5" />
+              <rect x="10" y="74" width="28" height="28" rx="5" /><rect x="106" y="74" width="28" height="28" rx="5" /><rect x="138" y="74" width="28" height="28" rx="5" />
+              <rect x="10" y="106" width="28" height="28" rx="5" /><rect x="42" y="106" width="28" height="28" rx="5" /><rect x="74" y="106" width="28" height="28" rx="5" /><rect x="106" y="106" width="28" height="28" rx="5" /><rect x="138" y="106" width="28" height="28" rx="5" />
+            </g>
+            <rect x="42" y="42" width="28" height="28" rx="5" class="ts-art-path" />
+            <rect x="74" y="42" width="28" height="28" rx="5" class="ts-art-path" />
+            <rect x="106" y="42" width="28" height="28" rx="5" class="ts-art-out" />
+            <rect x="42" y="74" width="28" height="28" rx="5" class="ts-art-path" />
+            <rect x="74" y="74" width="28" height="28" rx="5" class="ts-art-in" />
+            <path d="M144 16 L160 32 M160 16 L144 32" class="ts-art-tabu" />
+            <text x="120" y="61" class="ts-art-num">2</text><text x="88" y="93" class="ts-art-num">9</text>
+            <text x="56" y="61" class="ts-art-num">7</text><text x="88" y="61" class="ts-art-num">8</text><text x="56" y="93" class="ts-art-num">6</text>
+          </svg>
         </div>
-        <fieldset class="segmented">
-          <legend>Difficulty</legend>
-          <label><input type="radio" name="difficulty" value="easy" checked /> Easy</label>
-          <label><input type="radio" name="difficulty" value="medium" /> Medium</label>
-          <label><input type="radio" name="difficulty" value="hard" /> Hard</label>
-        </fieldset>
-        <p class="caption" id="difficulty-caption"></p>
-        <label class="field"><span>Game code (optional)</span>
-          <input type="text" id="code" maxlength="12" placeholder="Leave blank for a random code" autocomplete="off" /></label>
-        <p class="caption">Use the same code as a classmate to play on the identical grid — great for comparing tabu
-          search runs, like the two teams in the in-class slides.</p>
-        <button id="start" class="btn primary">▶ Start Game</button>
+
+        <h3 class="intro-heading">How it works</h3>
+        <ol class="intro-steps">
+          <li>
+            <span class="step-icon" aria-hidden="true">🧭</span>
+            <strong>Build a path</strong>
+            <span>Click cells one by one to build your initial solution: a connected path of a fixed length.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🔁</span>
+            <strong>Swap to improve</strong>
+            <span>Each move takes <b>one cell out</b> and puts <b>one cell in</b>, as long as the path stays connected.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🚫</span>
+            <strong>Tabu memory</strong>
+            <span>A removed cell can't come back for <b>tenure</b> moves, so you can't undo a move straight away.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🌟</span>
+            <strong>Aspiration</strong>
+            <span>A tabu move is allowed anyway if it beats the <b>best solution so far</b>.</span>
+          </li>
+        </ol>
+
+        <h3 class="intro-heading">Choose your grid</h3>
+        <div class="intro-modes three" role="radiogroup" aria-label="Difficulty">
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="easy" checked />
+            <div class="mode-card-head"><span class="mode-name">Easy</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Grid</span><b>6 × 6</b></li>
+              <li><span>Path length</span><b>5 cells</b></li>
+              <li><span>Possible paths</span><b>≈ 3,900</b></li>
+            </ul>
+            <p class="mode-desc">Small enough to imagine checking a lot of paths by hand.</p>
+          </label>
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="medium" />
+            <div class="mode-card-head"><span class="mode-name">Medium</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Grid</span><b>9 × 9</b></li>
+              <li><span>Path length</span><b>7 cells</b></li>
+              <li><span>Possible paths</span><b>≈ 79,000</b></li>
+            </ul>
+            <p class="mode-desc">Already far too many to check by hand.</p>
+          </label>
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="hard" />
+            <div class="mode-card-head"><span class="mode-name">Hard</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Grid</span><b>13 × 13</b></li>
+              <li><span>Path length</span><b>10 cells</b></li>
+              <li><span>Possible paths</span><b>≈ 4.4 million</b></li>
+            </ul>
+            <p class="mode-desc">Brute force is impractical: this is where a smart search pays off.</p>
+          </label>
+        </div>
+        <p class="caption">Possible paths are a rough upper bound on the number of paths of that length.</p>
+
+        <h3 class="intro-heading">Start</h3>
+        <div class="tool-card ts-start">
+          <label class="field"><span>🔑 Game code (optional)</span>
+            <input type="text" id="code" maxlength="12" placeholder="Leave blank for a random code" autocomplete="off" spellcheck="false" /></label>
+          <p class="mode-desc">Use the same code as a classmate to play on the identical grid, great for comparing tabu
+            search runs like the two teams in the in-class slides.</p>
+          <button id="start" class="btn primary">▶ Start game</button>
+        </div>
       </section>
 
       <!-- ───────────────────────── Construct ───────────────────────── -->
       <section id="phase-construct" hidden>
-        <h2 id="construct-title"></h2>
-        <p class="caption">Click a cell to start your path. After that, only cells adjacent to your last pick are selectable.</p>
-        <div class="grid-scroll"><div id="construct-grid" class="tgrid"></div></div>
-        <p id="construct-path"></p>
-        <div id="dead-end" class="alert error" hidden>🚧 Dead end — no unused adjacent cells from here. Undo a step and try a different direction.</div>
-        <div class="row">
-          <button id="undo" class="btn">↺ Undo</button>
-          <button id="redo" class="btn">↷ Redo</button>
-          <button id="clear" class="btn">✖ Clear</button>
-          <button id="confirm" class="btn primary">▶ Confirm &amp; Start Local Search</button>
+        <div class="ts-head">
+          <h2 id="construct-title"></h2>
+          <div class="ts-head-metrics">
+            <div><div class="metric-label">Path sum</div><div class="metric-value" id="construct-sum"></div></div>
+            <div><div class="metric-label">Grid</div><div class="metric-value js-diff"></div></div>
+            <div><div class="metric-label">Game code</div><div class="metric-value js-code"></div></div>
+            <button class="btn small js-new" type="button">↺ New game</button>
+          </div>
+        </div>
+        <div class="ts-strip">
+          <p class="caption">Click a cell to start your path. After that, only cells next to your last pick are selectable.</p>
+          <div class="ts-strip-actions">
+            <button id="undo" class="btn">↺ Undo</button>
+            <button id="redo" class="btn">↷ Redo</button>
+            <button id="clear" class="btn">✖ Clear</button>
+            <button id="confirm" class="btn primary">▶ Confirm &amp; start tabu search</button>
+          </div>
+        </div>
+        <div id="dead-end" class="alert error" hidden>🚧 Dead end: no unused adjacent cells from here. Undo a step and try a different direction.</div>
+        <div class="ts-stage">
+          <div>
+            <div class="grid-scroll"><div id="construct-grid" class="tgrid"></div></div>
+          </div>
+          <div class="ts-panel">
+            <p class="ts-panel-title">Your path</p>
+            <p id="construct-path" class="ts-path-line"></p>
+          </div>
         </div>
       </section>
 
       <!-- ────────────────────────── Search ─────────────────────────── -->
       <section id="phase-search" hidden>
-        <h2 id="search-title"></h2>
-        <div class="metrics">
-          <div><div class="metric-label">Current sum</div><div class="metric-value" id="m-sum"></div></div>
-          <div><div class="metric-label">Best found</div><div class="metric-value" id="m-best"></div></div>
-          <div><div class="metric-label">Tabu entries</div><div class="metric-value" id="m-tabu"></div></div>
-          <div><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed"></div></div>
+        <div class="ts-head">
+          <h2 id="search-title"></h2>
+          <div class="ts-head-metrics">
+            <div><div class="metric-label">Current sum</div><div class="metric-value" id="m-sum"></div></div>
+            <div><div class="metric-label">Best found</div><div class="metric-value" id="m-best"></div></div>
+            <div><div class="metric-label">Tabu cells</div><div class="metric-value" id="m-tabu"></div></div>
+            <div><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed"></div></div>
+            <div><div class="metric-label">Game code</div><div class="metric-value js-code"></div></div>
+            <button id="finish" class="btn small primary" type="button">🏁 Finish</button>
+            <button class="btn small js-new" type="button">↺ New game</button>
+          </div>
         </div>
-        <div id="tabu-list"></div>
-        <hr class="divider" />
-        <div id="search-notice"></div>
-        <div class="controls">
-          <label class="field"><span>Tabu tenure <output id="tenure-out">0</output></span>
+        <div class="ts-strip ts-controls">
+          <label class="field ts-tenure"><span>Tabu tenure <output id="tenure-out">0</output></span>
             <input type="range" id="tenure" min="0" max="8" step="1" value="0" /></label>
           <fieldset class="segmented">
-            <legend>Neighbor generation</legend>
-            <label><input type="radio" name="neighbor-mode" value="manual" checked /> 🖐 Manual — try one swap at a time</label>
-            <label><input type="radio" name="neighbor-mode" value="auto" /> ⚡ Auto — reveal the full neighborhood</label>
+            <legend>Neighbors</legend>
+            <label><input type="radio" name="neighbor-mode" value="manual" checked /> 🖐 Manual: one swap at a time</label>
+            <label><input type="radio" name="neighbor-mode" value="auto" /> ⚡ Auto: full neighborhood</label>
           </fieldset>
-        </div>
-        <p class="caption">Tenure: how many future iterations the cell a swap just removed stays forbidden from being brought back in.
-          0 = no memory at all (can cycle). Very high values can forbid every feasible move at once — a deadlock.</p>
-        <details class="expander" id="ap-details">
-          <summary>🤖 Auto-Play (watch tabu search run itself)</summary>
-          <div class="row">
-            <label class="field" style="margin:8px 0"><span>Iterations to auto-play</span>
+          <div class="ts-autoplay">
+            <label class="field"><span>Iterations</span>
               <input type="number" id="ap-n" min="1" max="30" step="1" value="10" /></label>
-            <button class="btn" id="ap-start">▶ Start</button>
+            <button class="btn" id="ap-start" title="Picks the best admissible move each iteration; stops on deadlock or on repeating a past solution.">🤖 Auto-play</button>
           </div>
-          <p class="caption">Automatically reveals the full neighborhood, picks the best admissible move (or the best
-            aspiration-allowed tabu move), and repeats — so you can watch tabu search escape local optima on its own.
-            Stops early on deadlock or on repeating a past solution.</p>
-        </details>
+        </div>
+        <div id="search-notice"></div>
         <div id="ap-live" hidden><div id="ap-status" class="alert info"></div><div id="ap-board"></div></div>
-        <div class="ts-cols">
+        <div class="ts-stage">
           <div>
-            <p id="search-path"></p>
-            <div id="search-hint"></div>
+            <p id="search-path" class="ts-path-line"></p>
             <div class="grid-scroll"><div id="search-grid" class="tgrid"></div></div>
             <button id="reveal" class="btn primary" hidden>⚡ Reveal full neighborhood</button>
           </div>
-          <div id="candidates"></div>
+          <div class="ts-right">
+            <div id="search-hint"></div>
+            <div id="tabu-list" class="ts-panel"></div>
+            <div id="candidates"></div>
+          </div>
         </div>
       </section>
 
       <!-- ────────────────────────── Finished ───────────────────────── -->
       <section id="phase-finished" hidden>
-        <h1>🏁 Search Complete</h1>
+        <div class="ts-head">
+          <h2>🏁 Search complete</h2>
+          <div class="ts-head-metrics">
+            <div><div class="metric-label">Grid</div><div class="metric-value js-diff"></div></div>
+            <div><div class="metric-label">Game code</div><div class="metric-value js-code"></div></div>
+          </div>
+        </div>
         <div class="metrics" id="fin-metrics"></div>
         <p class="caption" id="fin-caption"></p>
         <div id="progress-chart" class="chart"></div>
@@ -128,21 +222,12 @@
         <p id="fin-best"></p>
         <div class="row">
           <button id="replay" class="btn">🔁 Replay same grid (new initial solution)</button>
-          <button id="new-game" class="btn">🆕 New Game</button>
+          <button id="new-game" class="btn">🆕 New game</button>
         </div>
       </section>
     </div>
 
     <aside>
-      <div class="panel" id="status-panel" hidden>
-        <div class="metrics" style="margin:0">
-          <div><div class="metric-label">Game code</div><div class="metric-value" id="side-code"></div></div>
-          <div><div class="metric-label">Difficulty</div><div class="metric-value" id="side-diff"></div></div>
-          <div id="side-best-wrap"><div class="metric-label">Best sum so far</div><div class="metric-value" id="side-best"></div></div>
-        </div>
-        <button id="finish" class="btn small block" hidden>🏁 Finish &amp; See Report</button>
-        <button id="side-new" class="btn small block" style="margin-top:6px">↺ New Game</button>
-      </div>
       <div class="panel concepts">
         <h3>📘 Concepts</h3>
         <p class="caption">Click any topic for a quick explanation.</p>

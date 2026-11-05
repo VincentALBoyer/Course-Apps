@@ -4,13 +4,21 @@
  * as the Streamlit app.
  *
  * Find a connected path of cells that maximizes the sum of its values, then
- * improve it with swap moves that keep the path connected:
- *   - replace: swap a cell in place (adjacent to its path neighbors);
- *   - shift: at the head or tail only, drop that end and grow the path from
- *     the other end instead.
- * The tabu list forbids re-inserting the cell each accepted move removed,
- * for `tenure` future moves; aspiration lets a tabu move through anyway if
- * it would beat the best solution found so far.
+ * improve it with swap moves: take one cell out, put one cell in. A swap is
+ * a neighbor whenever the resulting cells can still be walked as a single
+ * connected path (the sum only depends on which cells are in it). Each
+ * neighbor is labeled by how the path changes:
+ *   - replace: the new cell takes the old one's place in the order;
+ *   - shift: drop the head or tail and grow the path from the other end;
+ *   - re-route: anything else (the path is re-ordered to stay connected).
+ * (The Streamlit original only offered replace and shift, which missed
+ * roughly half of the valid swaps, e.g. a new cell linking tail to head.)
+ *
+ * Tabu memory: each accepted move ages every entry by one, then forbids the
+ * cell it removed for `tenure` moves, using the tenure in force when the
+ * move is confirmed. A tenure change therefore starts with the very next
+ * move, and the list visibly builds up one move at a time. Aspiration lets a
+ * tabu move through anyway if it would beat the best solution found so far.
  *
  * Cells are [row, col] arrays; Maps/Sets key them as "r,c".
  */
@@ -93,45 +101,92 @@
   /** pos=0: drop the head, append after the tail; pos=last: drop the tail, prepend. */
   const applyShift = (path, pos, cell) => (pos === 0 ? path.slice(1).concat([cell]) : [cell].concat(path.slice(0, -1)));
 
-  function scoreCandidate(grid, path, pos, cell, tabuRemaining, bestSum, moveType = "replace") {
+  /** An order that walks every cell in `cells` as one 4-connected path, or
+   * null. Tries starting points in the given order (cells are passed in old
+   * path order, so the result stays close to the previous path). */
+  function hamiltonianPath(cells) {
+    const n = cells.length;
+    const index = new Map(cells.map((c, i) => [key(c), i]));
+    const adj = cells.map((c) => neighbors4(c, Infinity).map((m) => index.get(key(m))).filter((i) => i !== undefined));
+    const order = [];
+    const used = new Array(n).fill(false);
+    const dfs = (i) => {
+      used[i] = true; order.push(i);
+      if (order.length === n) return true;
+      for (const j of adj[i]) if (!used[j] && dfs(j)) return true;
+      used[i] = false; order.pop();
+      return false;
+    };
+    // Only cells with at most one neighbor can't be in the middle; if any
+    // exist, a path must start at one of them.
+    const ends = cells.map((_, i) => i).filter((i) => adj[i].length <= 1);
+    if (ends.length > 2) return null;
+    const starts = ends.length ? ends : cells.map((_, i) => i);
+    for (const s of starts) if (dfs(s)) return order.map((i) => cells[i]);
+    return null;
+  }
+
+  /** The move that swaps path[pos] out for `cell`, or null if the result
+   * can't be walked as one connected path: {type, new_path}. */
+  function moveFor(path, pos, cell) {
+    if (inPath(path, cell)) return null;
+    if (swapIsFeasible(path, pos, cell)) return { type: "replace", new_path: applySwap(path, pos, cell) };
+    if (shiftIsFeasible(path, pos, cell)) return { type: "shift", new_path: applyShift(path, pos, cell) };
+    const rest = path.filter((_, i) => i !== pos);
+    if (!rest.some((p) => isAdjacent(p, cell))) return null; // can't even touch the path
+    const walk = hamiltonianPath(rest.concat([cell]));
+    return walk ? { type: "reroute", new_path: walk } : null;
+  }
+
+  /** One accepted move: age every tabu entry (dropping expired ones), forget
+   * the cell that just came back in, then forbid the removed cell for
+   * `tenure` moves (tenure 0 adds nothing). tabu: key -> {rem, inCell}. */
+  function advanceTabu(tabu, tenure, outCell, inCell) {
+    const updated = new Map();
+    for (const [k, e] of tabu) if (e.rem - 1 > 0) updated.set(k, { rem: e.rem - 1, inCell: e.inCell });
+    updated.delete(key(inCell));
+    if (tenure > 0) updated.set(key(outCell), { rem: tenure, inCell });
+    return updated;
+  }
+
+  /** key -> moves remaining, the form scoreCandidate expects. */
+  const tabuRemaining = (tabu) => new Map([...tabu].map(([k, e]) => [k, e.rem]));
+
+  function scoreCandidate(grid, path, pos, cell, tabuRem, bestSum, move = moveFor(path, pos, cell)) {
     const outCell = path[pos];
-    const newPath = moveType === "shift" ? applyShift(path, pos, cell) : applySwap(path, pos, cell);
+    const newPath = move.new_path;
     const newSum = pathSum(grid, newPath);
     const delta = newSum - pathSum(grid, path);
-    const tabu = (tabuRemaining.get(key(cell)) || 0) > 0;
+    const tabu = (tabuRem.get(key(cell)) || 0) > 0;
     const aspiration = tabu && newSum > bestSum;
     return {
-      pos, out_cell: outCell, in_cell: cell, move_type: moveType, new_path: newPath,
+      pos, out_cell: outCell, in_cell: cell, move_type: move.type, new_path: newPath,
       new_sum: newSum, delta, tabu, aspiration, admissible: !tabu || aspiration,
     };
   }
 
-  /** Every feasible (position, cell, move type), best delta first. */
-  function enumerateNeighborhood(grid, path, tabuRemaining, bestSum) {
+  /** Refresh tabu/aspiration flags (e.g. after a tenure change). */
+  function rescore(cand, tabuRem, bestSum) {
+    const tabu = (tabuRem.get(key(cand.in_cell)) || 0) > 0;
+    const aspiration = tabu && cand.new_sum > bestSum;
+    return Object.assign(cand, { tabu, aspiration, admissible: !tabu || aspiration });
+  }
+
+  /** Every feasible (position, cell) swap, best delta first. */
+  function enumerateNeighborhood(grid, path, tabuRem, bestSum) {
     const size = grid.length;
     const out = [];
     for (let pos = 0; pos < path.length; pos++) {
       for (let r = 0; r < size; r++) {
         for (let c = 0; c < size; c++) {
           const cell = [r, c];
-          if (inPath(path, cell)) continue;
-          if (swapIsFeasible(path, pos, cell)) out.push(scoreCandidate(grid, path, pos, cell, tabuRemaining, bestSum, "replace"));
-          if (shiftIsFeasible(path, pos, cell)) out.push(scoreCandidate(grid, path, pos, cell, tabuRemaining, bestSum, "shift"));
+          const move = moveFor(path, pos, cell);
+          if (move) out.push(scoreCandidate(grid, path, pos, cell, tabuRem, bestSum, move));
         }
       }
     }
-    out.sort((a, b) => b.delta - a.delta); // stable, like Python's sort
+    out.sort((a, b) => b.delta - a.delta); // stable
     return out;
-  }
-
-  /** Age every tabu entry by one move, then forbid re-inserting outCell for
-   *  `tenure` moves (tenure 0 never forbids anything). */
-  function advanceTabu(tabuRemaining, tenure, outCell) {
-    const updated = new Map();
-    for (const [k, rem] of tabuRemaining) if (rem - 1 > 0) updated.set(k, rem - 1);
-    // Map.set on an existing key keeps its position, like a Python dict.
-    if (tenure > 0) updated.set(key(outCell), tenure);
-    return updated;
   }
 
   /** Best admissible candidate (first maximum), or null on deadlock. */
@@ -153,7 +208,7 @@
   TS.logic = {
     DIFFICULTIES, DIFFICULTY_ORDER, MAX_TENURE, MAX_AUTOPLAY_ITERATIONS,
     key, same, pathKey, inPath, resolveCode, generateGrid, neighbors4, isAdjacent, pathSum,
-    availableNextCells, swapIsFeasible, shiftIsFeasible, scoreCandidate, enumerateNeighborhood,
-    advanceTabu, pickBestAdmissible, estimateMaxPaths,
+    availableNextCells, swapIsFeasible, shiftIsFeasible, hamiltonianPath, moveFor, advanceTabu, tabuRemaining,
+    scoreCandidate, rescore, enumerateNeighborhood, pickBestAdmissible, estimateMaxPaths,
   };
 })();

@@ -1,36 +1,112 @@
-/* Tabu Search Grid Game — everything else comes from ../shared/base.css. */
+/* Tabu Search Grid Game — shared intro components live in ../shared/base.css. */
 
+/* ── Grid ──────────────────────────────────────────────────────────── */
 .grid-scroll { overflow-x: auto; padding: 2px 0 6px; }
-.tgrid { display: grid; gap: 3px; width: max-content; }
-.tgrid .hdr { color: #888; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; }
+/* --cell is set from JS (fitCells) so the whole grid fits the window. */
+.tgrid { --cell: 40px; display: grid; gap: 3px; width: max-content; }
+.tgrid .hdr { color: var(--muted); font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
 .tgrid .hdr.row { justify-content: flex-end; padding-right: 4px; }
 .cell {
-  width: 40px; height: 36px; border-radius: 0.5rem; font: 600 0.95rem/1 inherit;
+  width: var(--cell); height: calc(var(--cell) * 0.9); border-radius: 0.45rem;
+  font: 600 calc(var(--cell) * 0.38)/1 inherit;
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--border); background: var(--bg); color: var(--text); padding: 0;
 }
 button.cell { cursor: pointer; }
 button.cell:hover:not(:disabled) { border-color: #2a78d6; background: var(--surface); }
 button.cell:disabled { opacity: 0.4; cursor: not-allowed; }
-.cell.path { background: #2a78d6; border-color: #2a78d6; color: #fff; }
+.cell.path { background: #2a78d6; border-color: #2a78d6; color: #fff; opacity: 1; }
 button.cell.path:hover:not(:disabled) { background: #1f5fa8; }
 .cell.out { background: #eb6834; border-color: #eb6834; color: #fff; }
 .cell.in { background: #1a9c5e; border-color: #1a9c5e; color: #fff; }
 .cell.target { border: 2px solid #1a9c5e; }
 .cell.picked { outline: 3px solid #eb6834; outline-offset: 1px; }
-@media (max-width: 520px) { .cell { width: 34px; height: 32px; font-size: 0.85rem; } }
 
-.controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0 24px; align-items: end; }
-@media (max-width: 760px) { .controls { grid-template-columns: minmax(0, 1fr); } }
+/* ── Start page ────────────────────────────────────────────────────── */
+#phase-setup h1 { margin-top: 16px; }
+#phase-setup .intro-hero { padding: 18px 24px; }
+#phase-setup .intro-art { max-height: 140px; }
+#phase-setup .intro-heading { margin: 20px 0 10px; }
+#phase-setup .intro-steps li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 2px 12px; padding: 12px 14px; }
+#phase-setup .intro-steps .step-icon { grid-row: span 2; margin: 0; }
+.intro-modes.three .mode-facts li b { text-align: right; }
 
-.ts-cols { display: grid; grid-template-columns: minmax(0, 0.55fr) minmax(0, 0.45fr); gap: 24px; align-items: start; }
-@media (max-width: 1100px) { .ts-cols { grid-template-columns: minmax(0, 1fr); } }
+/* Hero picture: same colors as the game board. */
+.ts-art .ts-art-grid rect { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+.ts-art .ts-art-path { fill: #2a78d6; }
+.ts-art .ts-art-out { fill: #eb6834; }
+.ts-art .ts-art-in { fill: #1a9c5e; }
+.ts-art .ts-art-tabu { stroke: #d32f2f; stroke-width: 3; stroke-linecap: round; }
+.ts-art .ts-art-num { fill: #fff; font: 700 13px sans-serif; text-anchor: middle; }
 
-.cands { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-.cand { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.ts-start { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr) auto; gap: 8px 24px; align-items: end; }
+.ts-start .field { margin: 0; }
+.ts-start .mode-desc { align-self: center; }
+.ts-start .btn { margin: 0; padding: 10px 22px; }
+@media (max-width: 760px) { .ts-start { grid-template-columns: 1fr; } .ts-start .btn { justify-self: start; } }
+
+/* ── Game screens: full width, laptop-friendly ─────────────────────── */
+main.with-aside.ts-wide { grid-template-columns: minmax(0, 1fr); }
+/* Concepts are on the start page; the game screens don't repeat them. */
+main.with-aside.ts-wide > aside { display: none; }
+
+.ts-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; margin: 12px 0 4px; }
+.ts-head h2 { margin: 0; font-size: 1.25rem; }
+.ts-head-metrics { display: flex; align-items: center; gap: 8px 24px; flex-wrap: wrap; }
+.ts-head-metrics .metric-value { font-size: 1.1rem; line-height: 1.2; }
+.ts-head-metrics .metric-label { font-size: 12px; }
+.ts-head-metrics .btn { margin: 0; }
+
+/* One horizontal strip of controls under the header. */
+.ts-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  padding: 10px 16px; margin: 8px 0;
+}
+.ts-strip .caption { margin: 0; flex: 1 1 280px; }
+.ts-strip-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.ts-strip .btn { margin: 0; }
+.ts-controls .field { margin: 0; }
+.ts-controls .segmented { margin: 0; }
+.ts-controls .segmented legend { font-size: 12px; margin-bottom: 4px; }
+.ts-controls .segmented label { font-size: 14px; padding: 5px 12px; }
+.ts-tenure { width: 200px; }
+.ts-autoplay { display: flex; align-items: end; gap: 8px; margin-left: auto; }
+.ts-autoplay .field { width: 90px; }
+.ts-autoplay .field span { font-size: 12px; }
+.ts-autoplay input { padding: 6px 8px; }
+
+/* Grid on the left, tabu list + candidates on the right. */
+.ts-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .ts-stage { grid-template-columns: 1fr; } }
+.ts-path-line { margin: 0 0 6px; font-size: 15px; }
+/* Hint lives at the top of the right column so its changing length never
+ * moves (or resizes) the grid. */
+#search-hint:empty { display: none; }
+#search-hint .caption {
+  margin: 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--info-bg); color: var(--info-text); font-size: 14px;
+}
+/* One line max for the path summary, so the grid's top edge stays put. */
+.ts-path-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-right { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ts-panel { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 10px 14px; }
+.ts-panel-title { margin: 0 0 4px; font-weight: 700; font-size: 14px; }
+.tabu-lines { margin: 0; padding-left: 18px; font-size: 13px; }
+#reveal { margin-top: 4px; }
+
+/* Candidate list: scrolls inside the window height. */
+#candidates .list-title { margin: 0 0 6px; }
+#candidates .alert { margin: 0 0 8px; }
+/* max-height is set from JS (fitCandidateList) to end level with the grid. */
+.cands { max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.cand { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
 .cand:last-child { border-bottom: 0; }
 .cand.selected { background: var(--info-bg); }
 .cand .move { grid-column: 2; }
 .cand .res { grid-column: 2; color: var(--muted); }
 .cand .act { grid-column: 3; grid-row: 1 / span 2; }
-.tabu-lines { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }
+.cand-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.cand-actions .btn { margin: 0; }
+
+#ap-board p { margin: 0 0 8px; }
