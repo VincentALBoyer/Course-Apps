@@ -93,13 +93,28 @@
           </li>
         </ol>
 
-        <h3 class="intro-heading">Class code <span class="optional">(optional)</span></h3>
-        <div class="tool-card code-card">
-          <label class="field"><span>🔑 Code from your instructor</span>
-            <input type="text" id="class-code" maxlength="24" autocomplete="off" spellcheck="false"
-              value="IN2041" placeholder="e.g. IN2041A" /></label>
-          <p class="mode-desc">Everyone who enters the same code in the same mode gets <b>exactly the same
-            rounds</b>, so you can compete with your class on total score. Clear it for random rounds.</p>
+        <h3 class="intro-heading">Class settings <span class="optional">(optional)</span></h3>
+        <div class="tool-card settings-card">
+          <div class="code-card">
+            <label class="field"><span>🔑 Code from your instructor</span>
+              <input type="text" id="class-code" maxlength="24" autocomplete="off" spellcheck="false"
+                value="IN2041" placeholder="e.g. IN2041A" /></label>
+            <p class="mode-desc">Everyone who enters the same code in the same mode gets <b>exactly the same
+              rounds</b>, so you can compete with your class on total score. Clear it for random rounds.</p>
+          </div>
+          <div class="code-card">
+            <div class="timer-controls">
+              <label class="switch">
+                <input type="checkbox" id="timer-on" />
+                <span class="switch-track" aria-hidden="true"></span>
+                <span>⏱️ Stopwatch</span>
+              </label>
+              <label class="field timer-field"><span>Seconds per round</span>
+                <input type="number" id="timer-seconds" min="10" max="600" step="5" value="60" inputmode="numeric" disabled /></label>
+            </div>
+            <p class="mode-desc">Each round gets a countdown. When it reaches 0, the round is scored with what's in
+              the bin (an invalid layout scores 0) and the next round starts.</p>
+          </div>
         </div>
 
         <h3 class="intro-heading">Choose your mode</h3>
@@ -130,7 +145,7 @@
       <div id="game-playing" class="phase" hidden>
         <h2 id="round-title">Round 1 of 5</h2>
         <div class="metrics">
-          <div class="metric"><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed">0s</div></div>
+          <div class="metric" id="m-time-box"><div class="metric-label" id="m-time-label">Elapsed</div><div class="metric-value" id="m-elapsed">0s</div></div>
           <div class="metric"><div class="metric-label">Profit so far</div><div class="metric-value" id="m-profit">0</div></div>
           <div class="metric"><div class="metric-label">Utilization</div><div class="metric-value" id="m-util">0%</div></div>
         </div>
@@ -152,6 +167,7 @@
         <h2 id="final-title">🏁 Final report</h2>
         <div id="final-early" class="alert warning" hidden></div>
         <div id="final-code" class="alert info" hidden></div>
+        <div id="final-timer" class="alert info" hidden></div>
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total score (profit)</div><div class="metric-value" id="f-score"></div></div>
           <div class="metric"><div class="metric-label">Total time</div><div class="metric-value" id="f-time"></div></div>

@@ -106,6 +106,7 @@
       phase: "intro",
       hard: false,
       ended_early: false,
+      time_limit: null, // stopwatch: seconds per round, or null for no limit
       code: "", // class code: same code + mode => same rounds for everyone
       round_state: null,
       round_results: [],
@@ -133,10 +134,11 @@
     $("confirm-infeasible").checked = false;
   }
 
-  function finishRound(endEarly = false) {
+  function finishRound(endEarly = false, timedOut = false) {
     const rs = game.round_state;
     rs.items = []; // anything not placed is skipped
-    const elapsed = (Date.now() - rs.start_time) / 1000;
+    let elapsed = (Date.now() - rs.start_time) / 1000;
+    if (game.time_limit) elapsed = Math.min(elapsed, game.time_limit);
     const feasible = G.isFeasible(rs);
     const utilization = G.computeUtilization(rs);
     const profit = feasible ? G.computeProfit(rs) : 0;
@@ -148,9 +150,10 @@
     game.completed_instances.push({ id: rs.round_idx, bin_w: rs.bin_w, bin_h: rs.bin_h, items: rs.all_items });
     game.completed_placements[rs.round_idx] = rs.placed.slice();
 
+    const prefix = timedOut ? `⏱️ Time's up! Round ${rs.round_idx}` : `Round ${rs.round_idx} complete`;
     toast(feasible
-      ? `Round ${rs.round_idx} complete — ${profit}/${potential} profit captured.`
-      : `⚠️ Round ${rs.round_idx} complete — scored 0 (layout was infeasible).`);
+      ? `${prefix} — ${profit}/${potential} profit captured.`
+      : `⚠️ ${prefix} — scored 0 (layout was infeasible).`);
 
     if (rs.round_idx < N_ROUNDS && !endEarly) {
       startRound(rs.round_idx + 1);
@@ -205,11 +208,30 @@
     $("game-next").disabled = !feasible && !$("confirm-infeasible").checked;
   }
 
+  /** Clock tick: elapsed time normally, a countdown in stopwatch mode.
+   * When the countdown hits 0 the round is scored as-is and play moves on. */
   function updateElapsed() {
     const rs = game.round_state;
-    if (game.phase === "playing" && rs) $("m-elapsed").textContent = fmt0((Date.now() - rs.start_time) / 1000) + "s";
+    if (game.phase !== "playing" || !rs) return;
+    const elapsed = (Date.now() - rs.start_time) / 1000;
+    const box = $("m-time-box");
+    if (!game.time_limit) {
+      $("m-time-label").textContent = "Elapsed";
+      $("m-elapsed").textContent = fmt0(elapsed) + "s";
+      box.classList.remove("time-low");
+      return;
+    }
+    const left = Math.max(0, Math.ceil(game.time_limit - elapsed));
+    $("m-time-label").textContent = "⏱️ Time left";
+    $("m-elapsed").textContent = left + "s";
+    box.classList.toggle("time-low", left <= 10);
+    if (elapsed >= game.time_limit) {
+      finishRound(false, true);
+      renderGame();
+      window.scrollTo({ top: 0 });
+    }
   }
-  setInterval(updateElapsed, 1000);
+  setInterval(updateElapsed, 250);
 
   function finalStats() {
     const rows = game.round_results;
@@ -226,6 +248,8 @@
     $("final-early").textContent = game.ended_early
       ? `⏹️ Game ended early after round ${rows.length} of ${N_ROUNDS}. Rounds you didn't play count as 0.`
       : "";
+    $("final-timer").hidden = !game.time_limit;
+    $("final-timer").textContent = game.time_limit ? `⏱️ Stopwatch mode: ${game.time_limit}s per round.` : "";
     $("final-code").hidden = !game.code;
     $("final-code").textContent = game.code
       ? `🔑 Class code ${game.code}: everyone who used this code played the same rounds, so you can compare total scores directly.`
@@ -248,7 +272,8 @@
       // Results can't change once the game is over: build the workbook once.
       game.results_xlsx = X.instancesWorkbookBytes(
         game.completed_instances,
-        (game.hard ? "game-mode-hard" : "game-mode") + (game.code ? `:${game.code}` : ""), "1-5",
+        (game.hard ? "game-mode-hard" : "game-mode") + (game.code ? `:${game.code}` : "")
+          + (game.time_limit ? `:T${game.time_limit}` : ""), "1-5",
         game.completed_instances.length,
         game.completed_placements,
       );
@@ -286,10 +311,18 @@
     game.hard = hard;
     game.code = normalizeCode($("class-code").value);
     $("class-code").value = game.code;
+    if ($("timer-on").checked) {
+      const s = Math.round(Number($("timer-seconds").value));
+      game.time_limit = Number.isFinite(s) ? Math.min(600, Math.max(10, s)) : 60;
+      $("timer-seconds").value = game.time_limit;
+    } else {
+      game.time_limit = null;
+    }
     game.phase = "playing";
     startRound(1);
     renderGame();
   }
+  $("timer-on").addEventListener("change", (e) => { $("timer-seconds").disabled = !e.target.checked; });
   $("game-start").addEventListener("click", () => startGame(false));
   $("game-start-hard").addEventListener("click", () => startGame(true));
   $("confirm-infeasible").addEventListener("change", () => {
