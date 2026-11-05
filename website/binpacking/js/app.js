@@ -84,6 +84,11 @@
   // ── mode switching ───────────────────────────────────────────────────
   const tabs = document.querySelectorAll(".modes button");
   function setMode(mode) {
+    // Leaving the Game tab mid-game abandons it: back to the start screen.
+    if (mode !== "game" && game && game.phase === "playing") {
+      initGame();
+      renderGame();
+    }
     tabs.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mode === mode)));
     for (const m of ["game", "challenge", "scoring"]) $("mode-" + m).hidden = m !== mode;
     // Plotly sizes charts from their container; resize once it's visible.
@@ -99,6 +104,9 @@
   function initGame() {
     game = {
       phase: "intro",
+      hard: false,
+      ended_early: false,
+      code: "", // class code: same code + mode => same rounds for everyone
       round_state: null,
       round_results: [],
       completed_instances: [], // for end-of-game export
@@ -107,14 +115,25 @@
     };
   }
 
+  /** Normalize a class code so "abc 12" and "ABC12" are the same game. */
+  const normalizeCode = (raw) => String(raw).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 24);
+
+  /** Round RNG: random without a code; otherwise seeded from code, mode and
+   * round, so classmates with the same code get identical rounds. */
+  function roundRng(roundIdx) {
+    if (!game.code) return new MG.PyRandom(null);
+    const hex = MG.sha256Hex(`binpacking|${game.hard ? "hard" : "normal"}|${game.code}|round${roundIdx}`);
+    return new MG.PyRandom(BigInt("0x" + hex.slice(0, 16)));
+  }
+
   function startRound(roundIdx) {
-    const rs = G.generateRound(roundIdx, new MG.PyRandom(null));
+    const rs = G.generateRound(roundIdx, roundRng(roundIdx), game.hard);
     rs.start_time = Date.now();
     game.round_state = rs;
     $("confirm-infeasible").checked = false;
   }
 
-  function finishRound() {
+  function finishRound(endEarly = false) {
     const rs = game.round_state;
     rs.items = []; // anything not placed is skipped
     const elapsed = (Date.now() - rs.start_time) / 1000;
@@ -133,10 +152,11 @@
       ? `Round ${rs.round_idx} complete — ${profit}/${potential} profit captured.`
       : `⚠️ Round ${rs.round_idx} complete — scored 0 (layout was infeasible).`);
 
-    if (rs.round_idx < N_ROUNDS) {
+    if (rs.round_idx < N_ROUNDS && !endEarly) {
       startRound(rs.round_idx + 1);
       game.phase = "playing";
     } else {
+      game.ended_early = rs.round_idx < N_ROUNDS;
       game.phase = "final";
     }
   }
@@ -157,14 +177,19 @@
 
   function renderPlaying() {
     const rs = game.round_state;
-    $("round-title").textContent = `Round ${rs.round_idx} of ${N_ROUNDS}`;
+    $("round-title").textContent = `Round ${rs.round_idx} of ${N_ROUNDS}` + (game.hard ? " · 🔥 Hard" : "")
+      + (game.code ? ` · 🔑 ${game.code}` : "");
     $("m-profit").textContent = String(G.computeProfit(rs));
     $("m-util").textContent = fmt0(G.computeUtilization(rs)) + "%";
     updateElapsed();
 
     board.render({
       bin_w: rs.bin_w, bin_h: rs.bin_h,
-      items: rs.items.map((it) => ({ id: it.id, w: it.w, h: it.h, profit: it.profit, color: it.color })),
+      // Palette order: highest profit first; ties go to the smaller item.
+      items: rs.items
+        .slice()
+        .sort((a, b) => b.profit - a.profit || a.w * a.h - b.w * b.h || a.id - b.id)
+        .map((it) => ({ id: it.id, w: it.w, h: it.h, profit: it.profit, color: it.color })),
       placed: rs.placed.map((p) => ({
         id: p.item.id, x: p.x, y: p.y, w: G.placedW(p), h: G.placedH(p),
         rotated: p.rotated, color: p.item.color, profit: p.item.profit,
@@ -196,6 +221,15 @@
 
   function renderFinal() {
     const { rows, totalScore, totalTime, avgUtil } = finalStats();
+    $("final-title").textContent = "🏁 Final report" + (game.hard ? " · 🔥 Hard mode" : "");
+    $("final-early").hidden = !game.ended_early;
+    $("final-early").textContent = game.ended_early
+      ? `⏹️ Game ended early after round ${rows.length} of ${N_ROUNDS}. Rounds you didn't play count as 0.`
+      : "";
+    $("final-code").hidden = !game.code;
+    $("final-code").textContent = game.code
+      ? `🔑 Class code ${game.code}: everyone who used this code played the same rounds, so you can compare total scores directly.`
+      : "";
     $("f-score").textContent = String(totalScore);
     $("f-time").textContent = fmt0(totalTime) + "s";
     $("f-util").textContent = fmt0(avgUtil) + "%";
@@ -213,7 +247,10 @@
     if (!game.results_xlsx) {
       // Results can't change once the game is over: build the workbook once.
       game.results_xlsx = X.instancesWorkbookBytes(
-        game.completed_instances, "game-mode", "1-5", N_ROUNDS, game.completed_placements,
+        game.completed_instances,
+        (game.hard ? "game-mode-hard" : "game-mode") + (game.code ? `:${game.code}` : ""), "1-5",
+        game.completed_instances.length,
+        game.completed_placements,
       );
     }
   }
@@ -245,16 +282,36 @@
     if (game.phase === "final") renderFinal();
   }
 
-  $("game-start").addEventListener("click", () => {
+  function startGame(hard) {
+    game.hard = hard;
+    game.code = normalizeCode($("class-code").value);
+    $("class-code").value = game.code;
     game.phase = "playing";
     startRound(1);
     renderGame();
-  });
+  }
+  $("game-start").addEventListener("click", () => startGame(false));
+  $("game-start-hard").addEventListener("click", () => startGame(true));
   $("confirm-infeasible").addEventListener("change", () => {
     $("game-next").disabled = !$("confirm-infeasible").checked;
   });
   $("game-next").addEventListener("click", () => {
     finishRound();
+    renderGame();
+    window.scrollTo({ top: 0 });
+  });
+  $("game-end").addEventListener("click", () => {
+    const rs = game.round_state;
+    const left = N_ROUNDS - rs.round_idx;
+    const msg = [
+      "End the game now and go to the final report?",
+      G.isFeasible(rs)
+        ? `This round is scored with what's in the bin now.`
+        : `⚠️ This round's layout has overlaps or out-of-bounds items, so it will score 0.`,
+      left > 0 ? `The remaining ${left} round${left > 1 ? "s" : ""} won't be played.` : "",
+    ].filter(Boolean).join("\n\n");
+    if (!window.confirm(msg)) return;
+    finishRound(true);
     renderGame();
     window.scrollTo({ top: 0 });
   });
@@ -365,27 +422,6 @@
     renderSelectedInstance();
   }
 
-  function scoringReportText() {
-    const { results, summary, integrity } = scoring;
-    const lines = [
-      "Greedy Bin Packing — Scoring Report",
-      `Integrity check: ${integrity.ok ? "PASSED" : "FAILED"} — ${integrity.message}`,
-      `Total score: ${summary.total_score} / ${summary.total_potential}`,
-      `Feasible instances: ${summary.n_feasible}/${summary.n_instances}`,
-      `Average utilization: ${fmt0(summary.avg_utilization)}%`,
-      "",
-      "Per-instance:",
-    ];
-    for (const r of results) {
-      const note = r.feasible ? "" : ` [INFEASIBLE — ${r.error}, scored 0]`;
-      lines.push(
-        `  Instance ${r.instance_id}: ${r.profit}/${r.potential_profit} profit${note}, ` +
-          `${fmt0(r.utilization)}% utilization, ${r.items_placed}/${r.items_total} items placed`,
-      );
-    }
-    return lines.join("\n");
-  }
-
   function renderSelectedInstance() {
     const id = Number($("s-select").value);
     const d = scoring.reconstructed.get(id);
@@ -394,8 +430,6 @@
     plot($("s-plot"), P.buildInstanceFigure(d.bin_w, d.bin_h, d.items_by_id, d.placed, d.feasible, themeColors()));
   }
   $("s-select").addEventListener("change", renderSelectedInstance);
-  $("s-dl-report").addEventListener("click", () => download(scoringReportText(), "scoring_report.txt", "text/plain"));
-
   // ── boot ─────────────────────────────────────────────────────────────
 
   initGame();

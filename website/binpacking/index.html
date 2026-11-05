@@ -45,27 +45,86 @@
     <section id="mode-game" class="mode" role="tabpanel">
       <h1>📦 Greedy Bin Packing — Game</h1>
 
-      <div id="game-intro" class="phase">
-        <div class="prose">
-          <h3>The challenge</h3>
-          <p>You have <strong>one fixed bin</strong>. Items arrive for each round — drag them from
-          the list on the left and drop them into the bin. You can drag a placed
-          item again later to reposition it, or drag it back onto the list to
-          remove it. There are <strong>5 rounds</strong>, and each one is harder than the last.</p>
-          <p>Overlaps and out-of-bounds placements are allowed while you're playing —
-          but if your layout still has any when the round ends, that round scores
-          <strong>0 profit</strong>, no matter what you packed.</p>
-          <p>Each item has a <strong>profit</strong> (its color — pale to deep red — tells you how
-          valuable it is; hover an item to see the exact numbers) and a size. There's
-          no way to work out the perfect layout by hand here (packing rectangles
-          into a bin for maximum value is a genuinely hard problem) — so just go
-          with your gut. Whatever rule of thumb you end up using without thinking
-          about it too hard — biggest first? most valuable first? — is worth
-          remembering.</p>
-          <p><strong>Scoring:</strong> your score is the total profit of everything you packed,
-          across all 5 rounds. Your total time is tracked too.</p>
+      <div id="game-intro" class="phase intro">
+        <div class="intro-hero">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">5 rounds · one bin · maximum profit</p>
+            <p class="intro-lead">Drag items into a fixed bin and pack as much <strong>profit</strong> as
+              you can. Each round is harder than the last. The perfect layout is too hard to
+              work out by hand, so go with your gut, and notice which rule of thumb you
+              end up using.</p>
+          </div>
+          <svg class="intro-art" viewBox="0 0 200 140" role="img" aria-label="A bin packed with colored items">
+            <rect x="1.5" y="1.5" width="197" height="137" rx="3" class="art-bin" />
+            <rect x="8" y="8" width="72" height="56" rx="2" fill="#b3261e" />
+            <rect x="84" y="8" width="44" height="32" rx="2" fill="#e8a76a" />
+            <rect x="132" y="8" width="60" height="44" rx="2" fill="#cf5a3c" />
+            <rect x="84" y="44" width="44" height="44" rx="2" fill="#f6d38a" />
+            <rect x="8" y="68" width="40" height="64" rx="2" fill="#dc7650" />
+            <rect x="52" y="68" width="28" height="36" rx="2" fill="#fff3b0" />
+            <rect x="132" y="56" width="60" height="32" rx="2" fill="#f0b977" />
+            <rect x="84" y="92" width="108" height="40" rx="2" fill="#c13e2b" />
+            <rect x="52" y="108" width="28" height="24" rx="2" fill="#fbe39e" />
+          </svg>
         </div>
-        <button id="game-start" class="btn primary">Start</button>
+
+        <h3 class="intro-heading">How it works</h3>
+        <ol class="intro-steps">
+          <li>
+            <span class="step-icon" aria-hidden="true">🖱️</span>
+            <strong>Drag &amp; drop</strong>
+            <span>Drag items from the list into the bin. Move them, rotate them with ⟳, or drag them back to remove them.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">💰</span>
+            <strong>Read the colors</strong>
+            <span>Pale items are worth little and deep red ones are worth a lot. Hover any item for its exact size and profit.</span>
+            <span class="profit-scale" aria-hidden="true"></span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">⚠️</span>
+            <strong>Stay in bounds</strong>
+            <span>Overlaps are fine while you work, but if any remain when the round ends, that round scores <b>0</b>.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🏆</span>
+            <strong>Score</strong>
+            <span>Your score is the total profit you pack across all 5 rounds. Your time is tracked too.</span>
+          </li>
+        </ol>
+
+        <h3 class="intro-heading">Class code <span class="optional">(optional)</span></h3>
+        <div class="tool-card code-card">
+          <label class="field"><span>🔑 Code from your instructor</span>
+            <input type="text" id="class-code" maxlength="24" autocomplete="off" spellcheck="false"
+              value="IN2041" placeholder="e.g. IN2041A" /></label>
+          <p class="mode-desc">Everyone who enters the same code in the same mode gets <b>exactly the same
+            rounds</b>, so you can compete with your class on total score. Clear it for random rounds.</p>
+        </div>
+
+        <h3 class="intro-heading">Choose your mode</h3>
+        <div class="intro-modes">
+          <div class="mode-card">
+            <div class="mode-card-head"><span class="mode-name">Normal</span></div>
+            <ul class="mode-facts">
+              <li><span>Bin</span><b>20 × 14</b></li>
+              <li><span>Items per round</span><b>6 → 15</b></li>
+              <li><span>Fits?</span><b>Early rounds, yes</b></li>
+            </ul>
+            <p class="mode-desc">A gentle ramp. Learn the board, then the bin gets crowded.</p>
+            <button id="game-start" class="btn primary block">Start</button>
+          </div>
+          <div class="mode-card hard">
+            <div class="mode-card-head"><span class="mode-name">Hard</span><span class="mode-badge">🔥 Challenge</span></div>
+            <ul class="mode-facts">
+              <li><span>Bin</span><b>26 × 18</b></li>
+              <li><span>Items per round</span><b>10 → 22</b></li>
+              <li><span>Fits?</span><b>Never all</b></li>
+            </ul>
+            <p class="mode-desc">Every round has more items than the bin can hold. What you leave out matters as much as what you pack.</p>
+            <button id="game-start-hard" class="btn primary block">🔥 Start hard mode</button>
+          </div>
+        </div>
       </div>
 
       <div id="game-playing" class="phase" hidden>
@@ -83,11 +142,16 @@
           <input type="checkbox" id="confirm-infeasible" />
           I understand this round will score 0 profit because of the overlap/out-of-bounds items above
         </label>
-        <button id="game-next" class="btn primary">Next round</button>
+        <div class="row">
+          <button id="game-next" class="btn primary">Next round</button>
+          <button id="game-end" class="btn">⏹️ End game</button>
+        </div>
       </div>
 
       <div id="game-final" class="phase" hidden>
-        <h2>🏁 Final report</h2>
+        <h2 id="final-title">🏁 Final report</h2>
+        <div id="final-early" class="alert warning" hidden></div>
+        <div id="final-code" class="alert info" hidden></div>
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total score (profit)</div><div class="metric-value" id="f-score"></div></div>
           <div class="metric"><div class="metric-label">Total time</div><div class="metric-value" id="f-time"></div></div>
@@ -105,51 +169,95 @@
     <!-- ─────────────────────────── Challenge ─────────────────────────── -->
     <section id="mode-challenge" class="mode" role="tabpanel" hidden>
       <h1>🧪 Challenge Mode — Instance Generator</h1>
-      <div class="prose">
-        <p>Generate a batch of bin-packing instances to solve <strong>offline</strong> with your own
-        code. Same rules as the game: one fixed bin per instance, pack items to
-        maximize profit, no overlaps or out-of-bounds placements allowed.</p>
-        <p>Pick a <strong>seed</strong> so your batch is reproducible, a <strong>difficulty</strong> level (higher
-        = more items, a bigger bin, and tighter capacity — difficulty 10 means
-        hundreds of items, well past anything solvable by hand), and how many
-        instances you want bundled into one file.</p>
-      </div>
-      <div class="inputs">
-        <label class="field"><span>Seed / code</span>
-          <input type="number" id="c-seed" min="0" step="1" value="42" inputmode="numeric" /></label>
-        <label class="field"><span>Difficulty <output id="c-diff-out">5</output></span>
-          <input type="range" id="c-diff" min="1" max="10" step="1" value="5" /></label>
-        <label class="field"><span>Number of instances</span>
-          <input type="number" id="c-n" min="1" max="50" step="1" value="10" inputmode="numeric" /></label>
-      </div>
-      <button id="c-generate" class="btn primary">Generate instances</button>
-      <div id="c-result" hidden>
-        <div class="alert success" id="c-summary"></div>
-        <button id="c-download" class="btn primary">Download instances (.xlsx)</button>
-        <p class="caption">One row per item, with blank x, y, and rotated columns. Fill those in
-          (TRUE/FALSE for rotated) for whichever items your algorithm decides to
-          pack, and leave them blank for anything you skip — then upload this same
-          file, filled in, to Scoring mode to get graded.</p>
+      <div class="intro">
+        <div class="intro-hero no-art">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">Offline · reproducible · solve with code</p>
+            <p class="intro-lead">Generate a batch of bin-packing instances and solve them with
+              <strong>your own algorithm</strong>. The rules are the same as the game: one fixed bin per
+              instance, maximize profit, and no overlaps or out-of-bounds placements.</p>
+          </div>
+        </div>
+
+        <h3 class="intro-heading">How it works</h3>
+        <ol class="intro-steps three">
+          <li>
+            <span class="step-icon" aria-hidden="true">🎲</span>
+            <strong>Pick your settings</strong>
+            <span>The same <b>seed</b> always gives the same batch. Higher <b>difficulty</b> means a bigger bin and more items, and level 10 reaches the hundreds.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">📥</span>
+            <strong>Download &amp; solve</strong>
+            <span>You get one Excel row per item. Fill in <b>x</b>, <b>y</b> and <b>rotated</b> (TRUE/FALSE) for every item you pack, and leave skipped items blank.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">📊</span>
+            <strong>Get graded</strong>
+            <span>Upload the filled-in file in the <b>Scoring</b> tab. Any instance with an overlap or an out-of-bounds item scores 0.</span>
+          </li>
+        </ol>
+
+        <h3 class="intro-heading">Generate a batch</h3>
+        <div class="tool-card">
+          <div class="inputs">
+            <label class="field"><span>Seed / code</span>
+              <input type="number" id="c-seed" min="0" step="1" value="42" inputmode="numeric" /></label>
+            <label class="field"><span>Difficulty <output id="c-diff-out">5</output></span>
+              <input type="range" id="c-diff" min="1" max="10" step="1" value="5" /></label>
+            <label class="field"><span>Number of instances</span>
+              <input type="number" id="c-n" min="1" max="50" step="1" value="10" inputmode="numeric" /></label>
+          </div>
+          <button id="c-generate" class="btn primary">Generate instances</button>
+          <div id="c-result" hidden>
+            <div class="alert success" id="c-summary"></div>
+            <button id="c-download" class="btn primary">Download instances (.xlsx)</button>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- ──────────────────────────── Scoring ──────────────────────────── -->
     <section id="mode-scoring" class="mode" role="tabpanel" hidden>
       <h1>📊 Scoring Mode — Grade a Submission</h1>
-      <div class="prose">
-        <p>Upload your completed instances file (the one from Challenge mode, with the
-        x/y/rotated columns filled in offline). Each instance is graded
-        independently — an instance with any overlapping or out-of-bounds item
-        scores <strong>0 profit</strong>, regardless of what else was packed correctly.</p>
-        <p>The file is also checked against the signature recorded when it was
-        generated, to flag whether the underlying instance data (bin size, item
-        dimensions, profits) was altered.</p>
+      <div class="intro">
+        <div class="intro-hero no-art">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">Graded in your browser · nothing is uploaded</p>
+            <p class="intro-lead">Upload your completed instances file from Challenge mode, with the
+              <strong>x / y / rotated</strong> columns filled in, to get your score and look at each layout.</p>
+          </div>
+        </div>
+
+        <h3 class="intro-heading">How grading works</h3>
+        <ol class="intro-steps three">
+          <li>
+            <span class="step-icon" aria-hidden="true">🧮</span>
+            <strong>Each instance on its own</strong>
+            <span>Every instance is scored separately. Its profit is the total value of the items you packed.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">⚠️</span>
+            <strong>Feasible or zero</strong>
+            <span>Any overlapping or out-of-bounds item makes that instance score <b>0</b>, however well the rest was packed.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🔏</span>
+            <strong>Integrity check</strong>
+            <span>The file is checked against the signature recorded when it was generated, which flags any change to bin sizes, item sizes or profits.</span>
+          </li>
+        </ol>
+
+        <h3 class="intro-heading">Upload a submission</h3>
+        <div class="tool-card">
+          <label class="field"><span>Completed instances file (.xlsx)</span>
+            <input type="file" id="s-file" accept=".xlsx" /></label>
+          <button id="s-score" class="btn primary" disabled>Score submission</button>
+          <div id="s-error" class="alert error" hidden></div>
+        </div>
       </div>
-      <label class="field"><span>Completed instances file (.xlsx)</span>
-        <input type="file" id="s-file" accept=".xlsx" /></label>
-      <button id="s-score" class="btn primary" disabled>Score submission</button>
-      <div id="s-error" class="alert error" hidden></div>
       <div id="s-results" hidden>
+        <h3 class="intro-heading">Results</h3>
         <div id="s-integrity" class="alert"></div>
         <div class="metrics four">
           <div class="metric"><div class="metric-label">Total score</div><div class="metric-value" id="s-total"></div></div>
@@ -158,8 +266,7 @@
           <div class="metric"><div class="metric-label">Avg. utilization</div><div class="metric-value" id="s-util"></div></div>
         </div>
         <div class="table-wrap"><table id="s-table"></table></div>
-        <button id="s-dl-report" class="btn">Download report (.txt)</button>
-        <h3>Inspect a solution</h3>
+        <h3 class="intro-heading">Inspect a solution</h3>
         <label class="field"><span>Instance to plot</span><select id="s-select"></select></label>
         <div id="s-infeasible" class="alert error" hidden>This instance's solution is infeasible (overlap or out-of-bounds) — scored 0 profit.</div>
         <div id="s-plot" class="chart"></div>
