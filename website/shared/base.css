@@ -68,7 +68,9 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* Always reserve the scrollbar's width so centered content doesn't jump
+   sideways when the page grows past the viewport (e.g. a warning appearing). */
+html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
 body {
   margin: 0;
   background: var(--bg);
