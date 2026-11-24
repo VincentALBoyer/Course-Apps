@@ -21,6 +21,15 @@ button.cell.path:hover:not(:disabled) { background: #1f5fa8; }
 .cell.in { background: #1a9c5e; border-color: #1a9c5e; color: #fff; }
 .cell.target { border: 2px solid #1a9c5e; }
 .cell.picked { outline: 3px solid #eb6834; outline-offset: 1px; }
+/* A recently removed cell that no move may bring back yet; the badge shows
+ * how many more moves the ban lasts. */
+.cell.tabu { position: relative; border: 2px dashed #d03b3b; }
+.cell.tabu::after {
+  content: attr(data-tabu); position: absolute; top: 1px; right: 1px;
+  min-width: 13px; height: 13px; padding: 0 2px; border-radius: 999px; box-sizing: border-box;
+  background: #d03b3b; color: #fff; font: 700 9px/13px system-ui, sans-serif; text-align: center;
+}
+button.cell.tabu:disabled { opacity: 0.65; }
 
 /* ── Start page ────────────────────────────────────────────────────── */
 #phase-setup h1 { margin-top: 16px; }

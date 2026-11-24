@@ -189,8 +189,12 @@
       for (let c = 0; c < size; c++) {
         const st = stateFn([r, c]);
         const v = S.grid[r][c];
-        if (st.kind === "static") parts.push(`<span class="cell ${st.cls || ""}">${v}</span>`);
-        else parts.push(`<button type="button" class="cell ${st.cls || ""}" data-r="${r}" data-c="${c}"${st.disabled ? " disabled" : ""} aria-label="Row ${r + 1}, column ${c + 1}, value ${v}">${v}</button>`);
+        // st.tabu: moves left before this removed cell may come back.
+        const cls = (st.cls || "") + (st.tabu ? " tabu" : "");
+        const tabuAttr = st.tabu ? ` data-tabu="${st.tabu}" title="Tabu: can't come back for ${st.tabu} more move${st.tabu > 1 ? "s" : ""}"` : "";
+        const tabuLabel = st.tabu ? `, tabu for ${st.tabu} more move${st.tabu > 1 ? "s" : ""}` : "";
+        if (st.kind === "static") parts.push(`<span class="cell ${cls}"${tabuAttr}>${v}</span>`);
+        else parts.push(`<button type="button" class="cell ${cls}" data-r="${r}" data-c="${c}"${tabuAttr}${st.disabled ? " disabled" : ""} aria-label="Row ${r + 1}, column ${c + 1}, value ${v}${tabuLabel}">${v}</button>`);
       }
     }
     el.innerHTML = parts.join("");
@@ -215,7 +219,18 @@
     });
   }
 
+  /** Search-grid state, plus the tabu badge on any cell not shown as part
+   * of the path or the previewed swap. */
   function searchCellState(cell) {
+    const st = searchCellBase(cell);
+    if (!/\b(path|out|in)\b/.test(st.cls || "")) {
+      const rem = S.tabu.get(T.key(cell))?.rem;
+      if (rem) st.tabu = rem;
+    }
+    return st;
+  }
+
+  function searchCellBase(cell) {
     if (S.selectedCandIdx !== null) {
       const cand = S.candidates[S.selectedCandIdx];
       if (T.same(cell, cand.out_cell)) return { kind: "static", cls: "out" };
@@ -253,10 +268,11 @@
       .sort((a, b) => (b[1] - a[1]) || (a[0][0] - b[0][0]) || (a[0][1] - b[0][1]));
     const lines = entries.map(([out, rem]) => {
       const inCell = S.tabu.get(T.key(out))?.inCell;
-      const desc = inCell ? `out ${fmtCell(out)} → in ${fmtCell(inCell)}` : `removed ${fmtCell(out)}`;
-      return `<li><strong>${desc}</strong>: ${fmtCell(out)} can't come back for ${rem} more move${rem > 1 ? "s" : ""}</li>`;
+      const why = inCell ? ` <span class="caption">(removed when ${fmtCell(inCell)} came in)</span>` : "";
+      return `<li><strong>${fmtCell(out)}=${val(out)}</strong> can't come back for ${rem} more move${rem > 1 ? "s" : ""}${why}</li>`;
     });
-    $("tabu-list").innerHTML = `<p class="ts-panel-title">🚫 Tabu list</p><ul class="tabu-lines">${lines.join("")}</ul>`;
+    $("tabu-list").innerHTML = `<p class="ts-panel-title">🚫 Tabu list</p><ul class="tabu-lines">${lines.join("")}</ul>
+      <p class="caption" style="margin:6px 0 0">Any swap that brings one of these cells back is tabu, <em>whichever</em> path cell it takes out (unless it beats the best so far).</p>`;
   }
 
   function renderSearch() {
@@ -362,7 +378,8 @@
     const rows = cands.map((c, i) => {
       const outV = val(c.out_cell);
       const inV = val(c.in_cell);
-      let status = c.tabu && !c.aspiration ? "🚫 TABU" : c.tabu ? "🌟 aspiration" : "✅";
+      let status = c.tabu && !c.aspiration ? `🚫 TABU: brings back ${fmtCell(c.in_cell)}`
+        : c.tabu ? `🌟 aspiration: ${fmtCell(c.in_cell)} is tabu, but this beats the best` : "✅";
       if (c.reverses_last) status += " ↩️";
       const move = c.move_type === "shift"
         ? `↔️ shift: drop ${c.pos === 0 ? "head" : "tail"} ${fmtCell(c.out_cell)}=${outV}, grow ${c.pos === 0 ? "tail" : "head"} with ${fmtCell(c.in_cell)}=${inV}`
