@@ -97,6 +97,11 @@ main.with-aside.ts-wide > aside { display: none; }
 
 /* Candidate list: scrolls inside the window height. */
 #candidates .list-title { margin: 0 0 6px; }
+/* Drag handle under the candidate list (see app.js) to resize it vertically. */
+.cand-resize { height: 12px; margin: 2px 0 0; cursor: ns-resize; touch-action: none; display: flex; align-items: center; justify-content: center; }
+.cand-resize::before { content: ""; width: 48px; height: 4px; border-radius: 2px; background: var(--border); transition: background 0.15s; }
+.cand-resize:hover::before, .cand-resizing .cand-resize::before { background: var(--muted); }
+body.cand-resizing { cursor: ns-resize; user-select: none; }
 #candidates .alert { margin: 0 0 8px; }
 /* max-height is set from JS (fitCandidateList) to end level with the grid. */
 .cands { max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }

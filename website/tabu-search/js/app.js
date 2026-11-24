@@ -266,17 +266,50 @@
     fitCandidateList();
   }
 
+  // Candidate-list height adjustment (px) set by dragging the handle under it.
+  const LIST_MIN_H = 150;
+  let listExtra = 0;
+  let listBase = 0;
+
   /** Cap the candidate list so it (and its buttons) end level with the
-   * bottom of the grid; longer lists scroll inside that space. */
+   * bottom of the grid, plus the user's drag offset; longer lists scroll
+   * inside that space. */
   function fitCandidateList() {
     const list = document.querySelector("#candidates .cands");
     if (!list) return;
     const gridBottom = $("search-grid").getBoundingClientRect().bottom;
     const actions = document.querySelector("#candidates .cand-actions, #candidates [data-act=clear-tabu]");
     const below = actions ? actions.getBoundingClientRect().height + 8 : 0;
-    const room = gridBottom - list.getBoundingClientRect().top - below;
-    list.style.maxHeight = Math.max(150, Math.floor(room)) + "px";
+    listBase = Math.floor(gridBottom - list.getBoundingClientRect().top - below);
+    // The user's drag offset on top of the fitted height, never below the minimum.
+    listExtra = Math.max(listExtra, LIST_MIN_H - listBase);
+    list.style.maxHeight = listBase + listExtra + "px";
   }
+
+  // Drag the handle under the candidate list to make it taller or shorter.
+  $("candidates").addEventListener("pointerdown", (e) => {
+    const handle = e.target.closest(".cand-resize");
+    const list = document.querySelector("#candidates .cands");
+    if (!handle || !list || e.button !== 0) return;
+    e.preventDefault();
+    const startY = e.clientY;
+    const startH = listBase + listExtra;
+    document.body.classList.add("cand-resizing");
+    const move = (ev) => {
+      const h = Math.max(LIST_MIN_H, startH + ev.clientY - startY);
+      listExtra = h - listBase;
+      list.style.maxHeight = h + "px";
+    };
+    const up = () => {
+      document.body.classList.remove("cand-resizing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  });
 
   function renderSearchControls() {
     $("tenure").value = String(S.tenure);
@@ -345,6 +378,7 @@
       return `<div class="cand${sel ? " selected" : ""}"><strong>#${i + 1}</strong><span class="move">${move}</span><span class="res">sum <strong>${c.new_sum}</strong> (Δ${MG.signed(c.delta)}) · ${status}</span><span class="act">${act}</span></div>`;
     });
     out.push(`<div class="cands">${rows.join("")}</div>`);
+    out.push(`<div class="cand-resize" role="separator" aria-orientation="horizontal" title="Drag to resize the list"></div>`);
     if (!admissible) {
       out.push(`<div class="alert warning">⚠️ Every candidate here is blocked by the tabu list: a deadlock. Lower the tenure, or clear the tabu list to escape (a deliberate rule-break, for demonstration).</div>
         <button class="btn" data-act="clear-tabu">🧹 Clear tabu list &amp; continue</button>`);
