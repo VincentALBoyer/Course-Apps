@@ -5,7 +5,8 @@
  *
  * Differences from the Streamlit original (see logic.js): the neighborhood
  * is every swap that keeps the path connected (replace, shift or re-route),
- * and a tenure change always takes effect on the very next confirmed move. */
+ * and tenure is chosen in Step 1 and stays fixed for the whole search (the
+ * finish screen can restart from the same initial path with a new tenure). */
 (function () {
   "use strict";
   const { $, esc, fmt0 } = MG;
@@ -15,7 +16,7 @@
   const CONCEPTS = [
     ["Swap moves: replace, shift & re-route", "Every move takes <strong>one cell out</strong> of your path and puts <strong>one cell in</strong>. It's <strong>feasible</strong> whenever the new set of cells can still be walked as one connected path (up, down, left, right, no revisits).<br><br>The game labels each move by what happens to the path: a <strong>replace</strong> puts the new cell in the old one's place; a <strong>shift</strong> drops the head or tail and grows the path from the <strong>opposite</strong> end; a <strong>re-route</strong> is any other swap, where the path has to be re-ordered to stay connected (for example a new cell that links the tail back to the head)."],
     ["Neighborhood", "The <strong>neighborhood</strong> of your current path is every feasible swap you could make from it, one change away. Local search moves from neighborhood to neighborhood, one step at a time; a bigger neighborhood means more options per step, at the cost of more to evaluate."],
-    ["Tabu list & tenure", "The <strong>tabu list</strong> remembers the cell removed by each of your last few moves and temporarily forbids bringing it back in. <strong>Tenure</strong> is how many future moves that ban lasts. Tenure = 0 means no memory at all: nothing is ever forbidden. A new tenure applies from your next move on, so you can watch the list build up round by round."],
+    ["Tabu list & tenure", "The <strong>tabu list</strong> remembers the cell removed by each of your last few moves and temporarily forbids bringing it back in. <strong>Tenure</strong> is how many future moves that ban lasts. Tenure = 0 means no memory at all: nothing is ever forbidden. You choose the tenure before the search starts and it stays fixed; the list builds up one entry per move. To compare tenures, finish and restart from the same initial solution."],
     ["Why tenure = 0 can cycle", "With no memory, the best available move right after escaping a local optimum can simply be <strong>reversing your last swap</strong>, undoing the very move that got you out, straight back into the trap. Tenure exists specifically to block that reversal for a while, forcing the search into genuinely new territory."],
     ["Escaping local optima on purpose", "At a <strong>local optimum</strong>, every feasible swap makes things worse. Local search would simply stop here. Tabu search doesn't: it accepts the <em>least-bad</em> move anyway (even a worsening one), then relies on the tabu list to stop it from immediately climbing back to the same spot. That's how it explores past a trap that pure hill-climbing can't."],
     ["Aspiration criterion", "A rigid tabu list can accidentally forbid a genuinely great move. The <strong>aspiration criterion</strong> is the escape clause: a tabu move is allowed anyway if it would produce a new <strong>best solution overall</strong>."],
@@ -49,7 +50,7 @@
     Object.assign(S, {
       gameId: S.gameId + 1, gameCode: c, difficulty: diffKey, size: d.grid_size, L: d.path_length,
       grid: T.generateGrid(d.grid_size, new MG.PyRandom(seed)), phase: "construct",
-      buildPath: [], startTime: Date.now(), endTime: null, notice: null,
+      buildPath: [], startTime: Date.now(), endTime: null, notice: null, tenure: 0,
     });
   }
 
@@ -58,13 +59,13 @@
     const total = T.pathSum(S.grid, path);
     Object.assign(S, {
       currentPath: path, previousPath: null, initialPath: path, initialSum: total, bestPath: path, bestSum: total,
-      iteration: 0, tenure: 0, tabu: new Map(), neighborMode: "manual",
+      iteration: 0, tabu: new Map(), neighborMode: "manual", // tenure: as chosen in Step 1
       candidates: [], selectedOutPos: null, selectedCandIdx: null,
-      history: [{ iteration: 0, sum: total, best: total, delta: 0, tenure: 0, tabu: false, aspiration: false, repeat: false, cycle: 0 }],
+      history: [{ iteration: 0, sum: total, best: total, delta: 0, tenure: S.tenure, tabu: false, aspiration: false, repeat: false, cycle: 0 }],
       // solution key -> first iteration it was reached; full search state
       // key -> first iteration (see T.stateKey).
       visited: new Map([[T.solutionKey(path), 0]]),
-      states: new Map([[T.stateKey(path, new Map(), total, 0), 0]]),
+      states: new Map([[T.stateKey(path, new Map(), total, S.tenure), 0]]),
       phase: "search", notice: null,
     });
   }
@@ -117,8 +118,6 @@
   }
 
   function acceptMove(cand) {
-    // Uses the tenure in force right now, so a slider change applies to
-    // this very move and the list grows one entry per round.
     S.tabu = T.advanceTabu(S.tabu, S.tenure, cand.out_cell, cand.in_cell);
     S.iteration += 1;
     S.previousPath = S.currentPath;
@@ -237,6 +236,8 @@
     const path = S.buildPath;
     const L = S.L;
     $("construct-title").textContent = `Step 1 · Build your initial path (${path.length} / ${L} cells)`;
+    $("tenure").value = String(S.tenure);
+    $("tenure-out").textContent = String(S.tenure);
     $("construct-sum").textContent = String(T.pathSum(S.grid, path));
     const available = new Set(T.availableNextCells(S.size, path).map(T.key));
     $("construct-path").textContent = pathStr(path);
@@ -361,21 +362,19 @@
   });
 
   function renderSearchControls() {
-    $("tenure").value = String(S.tenure);
-    $("tenure-out").textContent = String(S.tenure);
+    $("m-tenure").textContent = String(S.tenure);
     document.querySelector(`input[name="neighbor-mode"][value="${S.neighborMode}"]`).checked = true;
 
     const last = S.history[S.history.length - 1];
     const notices = [];
     if (S.notice) notices.push(`<div class="alert ${S.notice[0]}">${esc(S.notice[1])}</div>`);
     if (last && S.iteration > 0 && !S.notice) {
-      if (last.cycle) notices.push(`<div class="alert warning">🔁 True cycle: same solution <em>and</em> same tabu list as at iteration ${last.cycleFrom}. Repeating the same choices would loop forever. Try raising the tabu tenure.</div>`);
+      if (last.cycle) notices.push(`<div class="alert warning">🔁 True cycle: same solution <em>and</em> same tabu list as at iteration ${last.cycleFrom}. Repeating the same choices would loop forever. Finish and restart from the same initial solution with a higher tenure to compare.</div>`);
       else if (last.repeat) notices.push(`<div class="alert info">↩️ You've returned to a solution you've already visited, but the tabu list is different now, so this isn't a closed loop yet. A higher tenure makes revisits rarer.</div>`);
     }
     $("search-notice").innerHTML = notices.join("");
 
     const lock = S.autoplaying;
-    $("tenure").disabled = lock;
     document.querySelectorAll('input[name="neighbor-mode"]').forEach((i) => { i.disabled = lock; });
     $("ap-start").disabled = lock;
     $("ap-live").hidden = !lock;
@@ -433,7 +432,7 @@
     out.push(`<div class="cands">${rows.join("")}</div>`);
     out.push(`<div class="cand-resize" role="separator" aria-orientation="horizontal" title="Drag to resize the list"></div>`);
     if (!admissible) {
-      out.push(`<div class="alert warning">⚠️ Every candidate here is blocked by the tabu list: a deadlock. Lower the tenure, or clear the tabu list to escape (a deliberate rule-break, for demonstration).</div>
+      out.push(`<div class="alert warning">⚠️ Every candidate here is blocked by the tabu list: a deadlock. Clear the tabu list to escape (a deliberate rule-break, for demonstration), or finish and restart from the same initial solution with a lower tenure.</div>
         <button class="btn" data-act="clear-tabu">🧹 Clear tabu list &amp; continue</button>`);
     } else {
       out.push(`<div class="cand-actions"><button class="btn" data-act="clear-cands">🗑 Clear list</button>
@@ -448,6 +447,7 @@
     $("fin-metrics").innerHTML = [
       metric("Initial sum", String(S.initialSum)),
       metric("Best sum found", String(S.bestSum), imp ? String(imp) : ""),
+      metric("Tenure", String(S.tenure)),
       metric("Iterations run", String(S.iteration)),
       metric("Total time", fmt0((S.endTime - S.startTime) / 1000) + "s"),
     ].join("");
@@ -557,8 +557,7 @@
     else if (act === "clear-tabu") { S.tabu = new Map(); rescoreCandidates(); }
     render();
   });
-  // A new tenure applies from the next confirmed move (acceptMove reads it);
-  // the current tabu list is left as it is.
+  // Tenure is chosen in Step 1 only and stays fixed during the search.
   $("tenure").addEventListener("input", (e) => {
     S.tenure = Number(e.target.value);
     render();
@@ -572,7 +571,10 @@
 
   $("finish").addEventListener("click", () => { S.phase = "finished"; S.endTime = Date.now(); render(); window.scrollTo({ top: 0 }); });
   document.querySelectorAll(".js-new").forEach((b) => b.addEventListener("click", () => { S.phase = "setup"; render(); window.scrollTo({ top: 0 }); }));
-  $("replay").addEventListener("click", () => { S.phase = "construct"; S.buildPath = []; render(); });
+  // Back to Step 1 with the same initial path preloaded: the student can
+  // change the tenure (or the path) and confirm to compare runs.
+  $("restart-same").addEventListener("click", () => { S.phase = "construct"; S.buildPath = S.initialPath.slice(); S.startTime = Date.now(); S.endTime = null; render(); window.scrollTo({ top: 0 }); });
+  $("replay").addEventListener("click", () => { S.phase = "construct"; S.buildPath = []; S.startTime = Date.now(); S.endTime = null; render(); window.scrollTo({ top: 0 }); });
   $("new-game").addEventListener("click", () => { S.phase = "setup"; render(); });
 
   let resizeTimer = null;

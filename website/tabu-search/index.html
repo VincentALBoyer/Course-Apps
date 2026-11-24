@@ -144,6 +144,8 @@
         <div class="ts-strip">
           <p class="caption">Click a cell to start your path. After that, you can grow it from <strong>either end</strong>: cells next to the first or last cell are selectable.
             Click either <strong>end</strong> of your path (marked ✕ on hover) to remove it; middle cells stay, so the path never breaks.</p>
+          <label class="field ts-tenure" title="How many moves a removed cell stays forbidden. Fixed for the whole search."><span>Tabu tenure <output id="tenure-out">0</output></span>
+            <input type="range" id="tenure" min="0" max="8" step="1" value="0" /></label>
           <div class="ts-strip-actions">
             <button id="clear" class="btn">✖ Clear</button>
             <button id="confirm" class="btn primary">▶ Confirm &amp; start tabu search</button>
@@ -168,6 +170,7 @@
           <div class="ts-head-metrics">
             <div><div class="metric-label">Current sum</div><div class="metric-value" id="m-sum"></div></div>
             <div><div class="metric-label">Best found</div><div class="metric-value" id="m-best"></div></div>
+            <div title="Chosen in Step 1, fixed for the whole search"><div class="metric-label">Tenure</div><div class="metric-value" id="m-tenure"></div></div>
             <div><div class="metric-label">Tabu cells</div><div class="metric-value" id="m-tabu"></div></div>
             <div><div class="metric-label">Elapsed</div><div class="metric-value" id="m-elapsed"></div></div>
             <div><div class="metric-label">Game code</div><div class="metric-value js-code"></div></div>
@@ -176,8 +179,6 @@
           </div>
         </div>
         <div class="ts-strip ts-controls">
-          <label class="field ts-tenure"><span>Tabu tenure <output id="tenure-out">0</output></span>
-            <input type="range" id="tenure" min="0" max="8" step="1" value="0" /></label>
           <fieldset class="segmented">
             <legend>Neighbors</legend>
             <label><input type="radio" name="neighbor-mode" value="manual" checked /> 🖐 Manual: one swap at a time</label>
@@ -186,7 +187,7 @@
           <div class="ts-autoplay">
             <label class="field"><span>Iterations</span>
               <input type="number" id="ap-n" min="1" max="30" step="1" value="10" /></label>
-            <button class="btn" id="ap-start" title="Picks the best admissible move each iteration; stops on deadlock or on repeating a past solution.">🤖 Auto-play</button>
+            <button class="btn" id="ap-start" title="Picks the best admissible move each iteration; stops only on deadlock (cycles are reported, not stopped).">🤖 Auto-play</button>
           </div>
         </div>
         <div id="search-notice"></div>
@@ -220,7 +221,8 @@
         <div class="table-wrap"><table id="history-table"></table></div>
         <p id="fin-best"></p>
         <div class="row">
-          <button id="replay" class="btn">🔁 Replay same grid (new initial solution)</button>
+          <button id="restart-same" class="btn primary">🔁 Restart from same initial solution (change tenure)</button>
+          <button id="replay" class="btn">🎲 Same grid, new initial solution</button>
           <button id="new-game" class="btn">🆕 New game</button>
         </div>
       </section>
