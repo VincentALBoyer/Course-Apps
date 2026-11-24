@@ -142,15 +142,14 @@
           </div>
         </div>
         <div class="ts-strip">
-          <p class="caption">Click a cell to start your path. After that, only cells next to your last pick are selectable.</p>
+          <p class="caption">Click a cell to start your path. After that, you can grow it from <strong>either end</strong>: cells next to the first or last cell are selectable.
+            Click either <strong>end</strong> of your path (marked ✕ on hover) to remove it; middle cells stay, so the path never breaks.</p>
           <div class="ts-strip-actions">
-            <button id="undo" class="btn">↺ Undo</button>
-            <button id="redo" class="btn">↷ Redo</button>
             <button id="clear" class="btn">✖ Clear</button>
             <button id="confirm" class="btn primary">▶ Confirm &amp; start tabu search</button>
           </div>
         </div>
-        <div id="dead-end" class="alert error" hidden>🚧 Dead end: no unused adjacent cells from here. Undo a step and try a different direction.</div>
+        <div id="dead-end" class="alert error" hidden>🚧 Dead end: neither end of your path has an unused adjacent cell. Click an end of your path to remove it and try a different direction.</div>
         <div class="ts-stage">
           <div>
             <div class="grid-scroll"><div id="construct-grid" class="tgrid"></div></div>
