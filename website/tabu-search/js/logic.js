@@ -40,6 +40,14 @@
   const key = (cell) => cell[0] + "," + cell[1];
   const same = (a, b) => a[0] === b[0] && a[1] === b[1];
   const pathKey = (path) => path.map(key).join(";");
+  /** A solution is the SET of cells (the sum ignores walking order), so the
+   * same cells walked differently, or in reverse, are the same solution. */
+  const solutionKey = (path) => path.map(key).sort().join(";");
+  /** Everything the next auto-play move depends on: solution, tabu memory
+   * (with moves left), best-so-far (aspiration) and tenure. If this repeats,
+   * the search is in a true cycle and will loop forever. */
+  const stateKey = (path, tabu, bestSum, tenure) =>
+    solutionKey(path) + "|" + [...tabu].map(([k, e]) => k + ":" + e.rem).sort().join(",") + "|" + bestSum + "|" + tenure;
   const inPath = (path, cell) => path.some((p) => same(p, cell));
 
   /** Seed from a share code (a random code if blank) — returns {code, seed}. */
@@ -75,7 +83,13 @@
       for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) all.push([r, c]);
       return all;
     }
-    return neighbors4(path[path.length - 1], size).filter((n) => !inPath(path, n));
+    // Grow from either end: unused neighbors of the tail, then of the head.
+    const ends = path.length > 1 ? [path[path.length - 1], path[0]] : [path[0]];
+    const out = [];
+    for (const end of ends) {
+      for (const n of neighbors4(end, size)) if (!inPath(path, n) && !inPath(out, n)) out.push(n);
+    }
+    return out;
   }
 
   function swapIsFeasible(path, pos, cell) {
@@ -207,7 +221,7 @@
 
   TS.logic = {
     DIFFICULTIES, DIFFICULTY_ORDER, MAX_TENURE, MAX_AUTOPLAY_ITERATIONS,
-    key, same, pathKey, inPath, resolveCode, generateGrid, neighbors4, isAdjacent, pathSum,
+    key, same, pathKey, solutionKey, stateKey, inPath, resolveCode, generateGrid, neighbors4, isAdjacent, pathSum,
     availableNextCells, swapIsFeasible, shiftIsFeasible, hamiltonianPath, moveFor, advanceTabu, tabuRemaining,
     scoreCandidate, rescore, enumerateNeighborhood, pickBestAdmissible, estimateMaxPaths,
   };

@@ -20,6 +20,12 @@ button.cell.path:hover:not(:disabled) { background: #1f5fa8; }
 .cell.out { background: #eb6834; border-color: #eb6834; color: #fff; }
 .cell.in { background: #1a9c5e; border-color: #1a9c5e; color: #fff; }
 .cell.target { border: 2px solid #1a9c5e; }
+/* Construct phase: a path end that can be clicked away (shows ✕ on hover). */
+.cell.removable { position: relative; }
+button.cell.removable:hover:not(:disabled) { background: #eb6834; border-color: #eb6834; color: transparent; }
+button.cell.removable:hover:not(:disabled)::after {
+  content: "✕"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff;
+}
 .cell.picked { outline: 3px solid #eb6834; outline-offset: 1px; }
 /* A recently removed cell that no move may bring back yet; the badge shows
  * how many more moves the ban lasts. */

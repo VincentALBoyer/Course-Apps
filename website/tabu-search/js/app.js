@@ -27,13 +27,13 @@
   // ── state ────────────────────────────────────────────────────────────
   const S = {
     phase: "setup", gameId: 0, gameCode: "", difficulty: "easy", size: 6, L: 5, grid: [], startTime: null, endTime: null,
-    buildPath: [], redo: [],
+    buildPath: [],
     currentPath: [], previousPath: null, initialPath: [], initialSum: 0, bestPath: [], bestSum: 0,
     iteration: 0, tenure: 0,
     // Tabu list: cell key -> {rem: moves it stays forbidden, inCell: what replaced it}.
     tabu: new Map(),
     neighborMode: "manual",
-    candidates: [], selectedOutPos: null, selectedCandIdx: null, history: [], visited: new Set(),
+    candidates: [], selectedOutPos: null, selectedCandIdx: null, history: [], visited: new Map(), states: new Map(),
     autoplaying: false, notice: null,
   };
 
@@ -49,7 +49,7 @@
     Object.assign(S, {
       gameId: S.gameId + 1, gameCode: c, difficulty: diffKey, size: d.grid_size, L: d.path_length,
       grid: T.generateGrid(d.grid_size, new MG.PyRandom(seed)), phase: "construct",
-      buildPath: [], redo: [], startTime: Date.now(), endTime: null, notice: null,
+      buildPath: [], startTime: Date.now(), endTime: null, notice: null,
     });
   }
 
@@ -60,8 +60,12 @@
       currentPath: path, previousPath: null, initialPath: path, initialSum: total, bestPath: path, bestSum: total,
       iteration: 0, tenure: 0, tabu: new Map(), neighborMode: "manual",
       candidates: [], selectedOutPos: null, selectedCandIdx: null,
-      history: [{ iteration: 0, sum: total, best: total, delta: 0, tenure: 0, tabu: false, aspiration: false, repeat: false }],
-      visited: new Set([T.pathKey(path)]), phase: "search", notice: null,
+      history: [{ iteration: 0, sum: total, best: total, delta: 0, tenure: 0, tabu: false, aspiration: false, repeat: false, cycle: 0 }],
+      // solution key -> first iteration it was reached; full search state
+      // key -> first iteration (see T.stateKey).
+      visited: new Map([[T.solutionKey(path), 0]]),
+      states: new Map([[T.stateKey(path, new Map(), total, 0), 0]]),
+      phase: "search", notice: null,
     });
   }
 
@@ -74,7 +78,7 @@
     return T.moveFor(S.currentPath, pos, cell);
   }
 
-  const reverses = (cand) => S.previousPath !== null && T.pathKey(cand.new_path) === T.pathKey(S.previousPath);
+  const reverses = (cand) => S.previousPath !== null && T.solutionKey(cand.new_path) === T.solutionKey(S.previousPath);
 
   function handleSearchClick(cell) {
     const idx = S.currentPath.findIndex((p) => T.same(p, cell));
@@ -119,16 +123,25 @@
     S.iteration += 1;
     S.previousPath = S.currentPath;
     S.currentPath = cand.new_path;
-    const pk = T.pathKey(S.currentPath);
-    const wasRepeat = S.visited.has(pk);
-    S.visited.add(pk);
     if (cand.new_sum > S.bestSum) {
       S.bestSum = cand.new_sum;
       S.bestPath = S.currentPath;
     }
+    // Revisit: this set of cells was reached before (tabu list may differ).
+    const sk = T.solutionKey(S.currentPath);
+    const wasRepeat = S.visited.has(sk);
+    if (!wasRepeat) S.visited.set(sk, S.iteration);
+    // True cycle: the whole search state (solution + tabu list + best +
+    // tenure) repeats an earlier one, so auto-play would loop forever.
+    const st = T.stateKey(S.currentPath, S.tabu, S.bestSum, S.tenure);
+    // Compare with the latest occurrence, so the loop length stays right
+    // on later laps.
+    const sameAs = S.states.get(st);
+    S.states.set(st, S.iteration);
     S.history.push({
       iteration: S.iteration, sum: cand.new_sum, best: S.bestSum, delta: cand.delta, tenure: S.tenure,
       tabu: cand.tabu, aspiration: cand.aspiration, repeat: wasRepeat,
+      cycle: sameAs === undefined ? 0 : S.iteration - sameAs, cycleFrom: sameAs,
     });
     S.candidates = [];
     S.selectedOutPos = null;
@@ -144,6 +157,12 @@
     render();
     const status = $("ap-status");
     const board = $("ap-board");
+    // Neither revisits nor cycles stop the run: the repeats are the point,
+    // so the chart at the end shows the pattern. They're summarized after.
+    let firstRevisit = null;
+    let firstCycle = null; // history row where the true cycle closed
+    let revisits = 0;
+    let moves = 0;
     for (let k = 0; k < n; k++) {
       const cands = T.enumerateNeighborhood(S.grid, S.currentPath, tabuNow(), S.bestSum);
       const best = T.pickBestAdmissible(cands);
@@ -151,16 +170,28 @@
         S.notice = ["error", `🧱 Deadlock at iteration ${S.iteration}: tenure=${S.tenure} blocks every feasible swap. Auto-play stopped early.`];
         break;
       }
-      if (S.visited.has(T.pathKey(best.new_path))) {
-        S.notice = ["warning", `🔁 Cycling detected at iteration ${S.iteration}: tenure=${S.tenure} isn't enough memory to avoid repeating a past solution. Auto-play stopped early.`];
-        break;
-      }
       acceptMove(best);
+      moves++;
+      const row = S.history[S.history.length - 1];
+      if (row.repeat) {
+        revisits++;
+        if (firstRevisit === null) firstRevisit = row.iteration;
+      }
+      if (row.cycle && firstCycle === null) firstCycle = row;
+      const tag = row.cycle ? ` · 🔁 cycle: same state as iteration ${row.cycleFrom}` : row.repeat ? " · ↩️ revisited solution" : "";
       renderSearchGridOnly();
-      board.innerHTML = `<p><strong>Iteration ${S.iteration}</strong>: ${moveLabel(best)}, out ${fmtCell(best.out_cell)} for in ${fmtCell(best.in_cell)} (Δ${MG.signed(best.delta)}) · current sum <strong>${best.new_sum}</strong> · best <strong>${S.bestSum}</strong></p>`;
+      board.innerHTML = `<p><strong>Iteration ${S.iteration}</strong>: ${moveLabel(best)}, out ${fmtCell(best.out_cell)} for in ${fmtCell(best.in_cell)} (Δ${MG.signed(best.delta)}) · current sum <strong>${best.new_sum}</strong> · best <strong>${S.bestSum}</strong>${tag}</p>`;
       status.textContent = `🤖 Auto-play: iteration ${S.iteration} / ${n}`;
       await MG.sleep(AUTOPLAY_DELAY_MS);
     }
+    let msg = null;
+    if (firstCycle) {
+      const p = firstCycle.cycle;
+      msg = `🔁 True cycle at iteration ${firstCycle.iteration}: same solution AND same tabu list as at iteration ${firstCycle.cycleFrom}, so from here the search repeats the same ${p}-move loop forever (tenure=${S.tenure} isn't enough memory). Finish to see the pattern on the chart.`;
+    } else if (firstRevisit !== null) {
+      msg = `↩️ ${revisits} of ${moves} auto-play moves revisited an earlier solution (first at iteration ${firstRevisit}), but each time with a different tabu list, so it's not a closed loop: the search can still move on.`;
+    }
+    if (msg) S.notice = S.notice ? [S.notice[0], `${S.notice[1]} ${msg}`] : ["warning", msg];
     S.autoplaying = false;
     render();
   }
@@ -191,10 +222,11 @@
         const v = S.grid[r][c];
         // st.tabu: moves left before this removed cell may come back.
         const cls = (st.cls || "") + (st.tabu ? " tabu" : "");
-        const tabuAttr = st.tabu ? ` data-tabu="${st.tabu}" title="Tabu: can't come back for ${st.tabu} more move${st.tabu > 1 ? "s" : ""}"` : "";
-        const tabuLabel = st.tabu ? `, tabu for ${st.tabu} more move${st.tabu > 1 ? "s" : ""}` : "";
-        if (st.kind === "static") parts.push(`<span class="cell ${cls}"${tabuAttr}>${v}</span>`);
-        else parts.push(`<button type="button" class="cell ${cls}" data-r="${r}" data-c="${c}"${tabuAttr}${st.disabled ? " disabled" : ""} aria-label="Row ${r + 1}, column ${c + 1}, value ${v}${tabuLabel}">${v}</button>`);
+        const title = st.tabu ? `Tabu: can't come back for ${st.tabu} more move${st.tabu > 1 ? "s" : ""}` : st.title;
+        const attrs = (st.tabu ? ` data-tabu="${st.tabu}"` : "") + (title ? ` title="${title}"` : "");
+        const extraLabel = title ? `, ${title}` : "";
+        if (st.kind === "static") parts.push(`<span class="cell ${cls}"${attrs}>${v}</span>`);
+        else parts.push(`<button type="button" class="cell ${cls}" data-r="${r}" data-c="${c}"${attrs}${st.disabled ? " disabled" : ""} aria-label="Row ${r + 1}, column ${c + 1}, value ${v}${extraLabel}">${v}</button>`);
       }
     }
     el.innerHTML = parts.join("");
@@ -209,12 +241,13 @@
     const available = new Set(T.availableNextCells(S.size, path).map(T.key));
     $("construct-path").textContent = pathStr(path);
     $("dead-end").hidden = !(path.length && path.length < L && !available.size);
-    $("undo").disabled = !path.length;
-    $("redo").disabled = !S.redo.length;
     $("clear").disabled = !path.length;
     $("confirm").disabled = path.length !== L;
     renderGrid($("construct-grid"), (cell) => {
-      if (T.inPath(path, cell)) return { kind: "static", cls: "path" };
+      // Only the two ends can be removed without breaking the path.
+      const idx = path.findIndex((p) => T.same(p, cell));
+      if (idx >= 0 && (idx === 0 || idx === path.length - 1)) return { kind: "button", cls: "path removable", title: "Click to remove this end of the path" };
+      if (idx > 0) return { kind: "static", cls: "path", title: "Middle cell: removing it would break the path" };
       return { kind: "button", disabled: !(path.length < L && available.has(T.key(cell))) };
     });
   }
@@ -335,7 +368,10 @@
     const last = S.history[S.history.length - 1];
     const notices = [];
     if (S.notice) notices.push(`<div class="alert ${S.notice[0]}">${esc(S.notice[1])}</div>`);
-    if (last && last.repeat && S.iteration > 0) notices.push(`<div class="alert warning">🔁 You've returned to a solution you've already visited, a sign of cycling. Try raising the tabu tenure.</div>`);
+    if (last && S.iteration > 0 && !S.notice) {
+      if (last.cycle) notices.push(`<div class="alert warning">🔁 True cycle: same solution <em>and</em> same tabu list as at iteration ${last.cycleFrom}. Repeating the same choices would loop forever. Try raising the tabu tenure.</div>`);
+      else if (last.repeat) notices.push(`<div class="alert info">↩️ You've returned to a solution you've already visited, but the tabu list is different now, so this isn't a closed loop yet. A higher tenure makes revisits rarer.</div>`);
+    }
     $("search-notice").innerHTML = notices.join("");
 
     const lock = S.autoplaying;
@@ -417,13 +453,16 @@
     ].join("");
     const nAsp = S.history.filter((h) => h.aspiration).length;
     const nRep = S.history.filter((h) => h.repeat).length;
-    $("fin-caption").textContent = `Aspiration overrides used: ${nAsp} · Repeated solutions visited: ${nRep}`;
+    const cyc = S.history.find((h) => h.cycle);
+    const cycText = cyc ? `true cycle from iteration ${cyc.cycleFrom} (a ${cyc.cycle}-move loop)` : "no true cycle";
+    $("fin-caption").textContent = `Aspiration overrides used: ${nAsp} · Revisited solutions: ${nRep} · ${cycText}`;
     renderChart();
     MG.renderTable($("history-table"), [
       { key: "iteration", label: "Iteration" }, { key: "sum", label: "Sum" }, { key: "best", label: "Best" },
       { key: "delta", label: "Δ", fmt: MG.signed }, { key: "tenure", label: "Tenure" },
       { key: "tabu", label: "Was tabu", fmt: MG.yesNo }, { key: "aspiration", label: "Aspiration used", fmt: MG.yesNo },
-      { key: "repeat", label: "Repeated solution", fmt: MG.yesNo },
+      { key: "repeat", label: "Revisited solution", fmt: MG.yesNo },
+      { key: "cycle", label: "True cycle", fmt: (v) => (v ? `🔁 ${v}-move loop` : "✗") },
     ], S.history);
     $("fin-best").innerHTML = `<strong>Best path found:</strong> ${esc(pathStr(S.bestPath))}`;
   }
@@ -431,11 +470,22 @@
   function renderChart() {
     const h = S.history;
     const its = h.map((r) => r.iteration);
-    MG.plot($("progress-chart"), [
+    const revisits = h.filter((r) => r.repeat && !r.cycle);
+    const cycles = h.filter((r) => r.cycle);
+    const firstCycle = cycles[0];
+    const traces = [
       { type: "scatter", mode: "lines", x: its, y: its.map(() => S.initialSum), line: { color: "#c3c2b7", dash: "dash", width: 1.5 }, name: `Initial solution (${S.initialSum})`, hoverinfo: "skip" },
-      { type: "scatter", mode: "lines+markers", x: its, y: h.map((r) => r.sum), name: "Current solution", line: { color: "#eb6834", width: 2 }, marker: { size: 7, color: "#eb6834" }, hovertemplate: "Iteration %{x}<br>Current sum: %{y}<extra></extra>" },
-      { type: "scatter", mode: "lines+markers", x: its, y: h.map((r) => r.best), name: "Best found", line: { color: "#2a78d6", width: 3 }, marker: { size: 9, color: "#2a78d6" }, hovertemplate: "Iteration %{x}<br>Best sum: %{y}<extra></extra>" },
-    ], {
+      // Best first, so the current line is drawn on top and stays visible
+      // when the two coincide.
+      { type: "scatter", mode: "lines+markers", x: its, y: h.map((r) => r.best), name: "Best found", line: { color: "#2a78d6", width: 4 }, marker: { size: 10, color: "#2a78d6" }, hovertemplate: "Iteration %{x}<br>Best sum: %{y}<extra></extra>" },
+      { type: "scatter", mode: "lines+markers", x: its, y: h.map((r) => r.sum), name: "Current solution", line: { color: "#eb6834", width: 2 }, marker: { size: 6, color: "#eb6834" }, hovertemplate: "Iteration %{x}<br>Current sum: %{y}<extra></extra>" },
+    ];
+    if (revisits.length) traces.push({ type: "scatter", mode: "markers", x: revisits.map((r) => r.iteration), y: revisits.map((r) => r.sum), name: "Revisited solution", marker: { size: 14, symbol: "circle-open", color: "#e0a400", line: { width: 2 } }, hovertemplate: "Iteration %{x}<br>Revisited solution (different tabu list)<extra></extra>" });
+    if (cycles.length) traces.push({ type: "scatter", mode: "markers", x: cycles.map((r) => r.iteration), y: cycles.map((r) => r.sum), name: "True cycle", marker: { size: 14, symbol: "circle-open", color: "#d03b3b", line: { width: 2.5 } }, customdata: cycles.map((r) => r.cycleFrom), hovertemplate: "Iteration %{x}<br>Same state as iteration %{customdata}<extra></extra>" });
+    MG.plot($("progress-chart"), traces, {
+      // Shade the stretch where the search is stuck in its loop.
+      shapes: firstCycle ? [{ type: "rect", xref: "x", yref: "paper", x0: firstCycle.cycleFrom, x1: its[its.length - 1], y0: 0, y1: 1, fillcolor: "rgba(208,59,59,0.10)", line: { width: 0 }, layer: "below" }] : [],
+      annotations: firstCycle ? [{ xref: "x", yref: "paper", x: firstCycle.cycleFrom, y: 1, xanchor: "left", yanchor: "top", showarrow: false, text: `🔁 loop of ${firstCycle.cycle} moves`, font: { size: 11, color: "#d03b3b" } }] : [],
       height: 300, margin: { l: 50, r: 10, t: 10, b: 45 },
       legend: { orientation: "h", yanchor: "bottom", y: 1.02, x: 0 },
       xaxis: { title: { text: "Iteration" }, dtick: 1, zeroline: false, tickfont: { size: 10 } },
@@ -470,13 +520,18 @@
   $("construct-grid").addEventListener("click", (e) => {
     const b = e.target.closest("button.cell");
     if (!b || b.disabled) return;
-    S.buildPath.push([Number(b.dataset.r), Number(b.dataset.c)]);
-    S.redo = [];
+    const cell = [Number(b.dataset.r), Number(b.dataset.c)];
+    const path = S.buildPath;
+    // Clicking an end of the path removes it (the only removals that keep
+    // the path connected); any other enabled cell extends whichever end it
+    // touches (the tail when it touches both).
+    if (path.length && T.same(cell, path[path.length - 1])) path.pop();
+    else if (path.length && T.same(cell, path[0])) path.shift();
+    else if (path.length && !T.isAdjacent(cell, path[path.length - 1])) path.unshift(cell);
+    else path.push(cell);
     render();
   });
-  $("undo").addEventListener("click", () => { if (S.buildPath.length) S.redo.push(S.buildPath.pop()); render(); });
-  $("redo").addEventListener("click", () => { if (S.redo.length) S.buildPath.push(S.redo.pop()); render(); });
-  $("clear").addEventListener("click", () => { S.buildPath = []; S.redo = []; render(); });
+  $("clear").addEventListener("click", () => { S.buildPath = []; render(); });
   $("confirm").addEventListener("click", () => { confirmInitial(); render(); });
 
   $("search-grid").addEventListener("click", (e) => {
@@ -517,7 +572,7 @@
 
   $("finish").addEventListener("click", () => { S.phase = "finished"; S.endTime = Date.now(); render(); window.scrollTo({ top: 0 }); });
   document.querySelectorAll(".js-new").forEach((b) => b.addEventListener("click", () => { S.phase = "setup"; render(); window.scrollTo({ top: 0 }); }));
-  $("replay").addEventListener("click", () => { S.phase = "construct"; S.buildPath = []; S.redo = []; render(); });
+  $("replay").addEventListener("click", () => { S.phase = "construct"; S.buildPath = []; render(); });
   $("new-game").addEventListener("click", () => { S.phase = "setup"; render(); });
 
   let resizeTimer = null;
