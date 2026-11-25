@@ -41,10 +41,12 @@
           parents, choose where to cut for crossover, and decide which gene to mutate, evolving
           a population of random words until one matches. Fitness alone is your feedback - no
           other hints are given, just like the in-class activity.</p>
+          <p>The game starts fully manual. Once you've seen every operator by hand, switch to the <strong>🤖 Auto mode</strong> tab
+          to watch the GA run step by step with roulette-wheel or tournament selection, different survivor rules and mutation rates.</p>
         </div>
         <label class="field"><span>Hidden word (kept secret - shown as dots)</span>
           <input type="password" id="hidden-word" maxlength="8" autocomplete="off" /></label>
-        <p class="caption">Letters only, 4-8 letters (e.g. PLANET).</p>
+        <p class="caption">Letters only, 4-8 letters (e.g. PLANET). Accents are removed (Ñ→N, Á→A).</p>
         <fieldset class="segmented">
           <legend>Population size (kept even for clean parent pairing)</legend>
           <label><input type="radio" name="pop" value="4" /> 4</label>
@@ -57,7 +59,7 @@
           <label><input type="radio" name="scoring" value="partial" /> Partial credit (alphabet distance)</label>
         </fieldset>
         <p class="caption"><strong>Exact match</strong>: 1 point only for a letter in the exact right spot - the classic
-          version, where a near-miss word can score 0. <strong>Partial credit</strong>: wrong letters still earn a
+          version, where a near-miss word can score 0.<br /><strong>Partial credit</strong>: wrong letters still earn a
           fractional point based on how close they are alphabetically to the correct letter (e.g. guessing
           S for R is close; guessing Z for A is not) - a smoother fitness landscape for the GA to climb.</p>
         <label class="field"><span>Random seed / class code (optional)</span>
@@ -87,6 +89,16 @@
         <p class="caption" id="fin-scoring"></p>
         <div id="fitness-chart" class="chart"></div>
         <div class="table-wrap"><table id="history-table"></table></div>
+        <h3>Compare runs</h3>
+        <p class="caption" id="compare-hint">Play again and finish another run of the same word to compare them here.
+          <strong>Play Again</strong> keeps the class code, so each run starts from the same population - only your
+          choices (or the auto-mode settings) differ.</p>
+        <div id="compare-body" hidden>
+          <p class="caption">Best fitness per generation for each run of this word. Same class code = same starting population.</p>
+          <div id="compare-chart" class="chart"></div>
+          <div class="table-wrap"><table id="compare-table"></table></div>
+          <button id="clear-runs" class="btn small">✖ Clear earlier runs</button>
+        </div>
         <div class="row">
           <button id="play-again" class="btn">🔁 Play Again (same word)</button>
           <button id="new-game" class="btn">🆕 New Game</button>
@@ -100,6 +112,7 @@
         <div class="metric-value" id="side-best"></div>
         <button id="side-action" class="btn small block"></button>
       </div>
+      <div class="panel auto-settings" id="auto-panel" hidden></div>
       <div class="panel concepts">
         <h3>📘 GA Concepts</h3>
         <p class="caption">Click any topic for a quick explanation.</p>
