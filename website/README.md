@@ -13,6 +13,7 @@ puts no load on any server. There is nothing to install and no sign-in.
 | `/ga-wordgame/` | 🧬 GA Word Game | [`GA_WordGame_App`](../streamlit-apps/GA_WordGame_App) |
 | `/tabu-search/` | 🔀 Tabu Search: The Grid Game | [`TabuSearch_GridGame_App`](../streamlit-apps/TabuSearch_GridGame_App) |
 | `/peak-and-valley/` | ⛰️ Peak and Valley | [`ExhaustiveVsLocalSearch_App`](../streamlit-apps/ExhaustiveVsLocalSearch_App) |
+| `/ant-colony/` | 🐜 Ant Colony: The Pheromone Trail | — (HTML only) |
 
 Home page links ending in `#game`, `#challenge` or `#scoring` (the old bin
 packing links) open that mode of `/binpacking/`.
