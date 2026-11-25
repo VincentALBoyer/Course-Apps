@@ -22,7 +22,7 @@
 
   // ── state ────────────────────────────────────────────────────────────
   const S = {
-    phase: "setup", gameId: 0, hidden: "", L: 6, popSize: 6, mode: "exact", rng: null,
+    phase: "setup", gameId: 0, hidden: "", L: 6, popSize: 6, mode: "exact", code: "", rng: null,
     population: [], roundIdx: 0, offspring: [], history: [], totalEvals: 0,
     found: false, winningWord: null, foundGen: null, stoppedManually: false,
     startTime: null, endTime: null, bestWord: null, bestFit: null, bestImprovedGen: 0,
@@ -56,7 +56,7 @@
     population.sort((a, b) => G.computeFitness(b, word, mode) - G.computeFitness(a, word, mode));
     const stats = G.populationStats(population, word, mode);
     Object.assign(S, {
-      gameId: S.gameId + 1, hidden: word, L, popSize, mode, rng, population,
+      gameId: S.gameId + 1, hidden: word, L, popSize, mode, code, rng, population,
       roundIdx: 0, offspring: [], history: [{ generation: 0, best: stats.best, avg: stats.avg }],
       totalEvals: popSize, found: false, winningWord: null, foundGen: null, stoppedManually: false,
       startTime: Date.now(), endTime: null, phase: "breeding", bestWord: null, bestFit: null, bestImprovedGen: 0,
@@ -113,7 +113,10 @@
     const gen = S.roundIdx + 1;
     const winner = S.offspring.find((o) => o.fitness === S.L);
     if (winner) {
-      const fits = S.offspring.map((o) => o.fitness);
+      // Same basis as every other row: the popSize best of population + offspring
+      // (what elitist survivor selection would keep), not just the partial pool.
+      const fits = S.population.map(score).concat(S.offspring.map((o) => o.fitness))
+        .sort((x, y) => y - x).slice(0, S.popSize);
       S.history.push({ generation: gen, best: Math.max(...fits), avg: MG.pySum(fits) / fits.length });
       Object.assign(S, { found: true, winningWord: winner.word, foundGen: gen });
       finish();
@@ -261,7 +264,7 @@
   function renderWorkspace() {
     const L = S.L;
     const pk = pairKey();
-    const [a, b] = (UI.order.get(pk) || []).slice().sort((x, y) => x - y);
+    const [a, b] = UI.order.get(pk) || []; // click order: first click = Parent A
     const cut = UI.cut.has(pk) ? UI.cut.get(pk) : Math.floor(L / 2);
     const [c1, c2] = G.crossover(S.population[a], S.population[b], cut);
     const stagnant = isStagnant();
@@ -351,7 +354,7 @@
     MG.plot($("fitness-chart"), [
       { type: "scatter", mode: "lines", x: gens, y: gens.map(() => L), line: { color: "#c3c2b7", dash: "dash", width: 1.5 }, name: `Target (${L})`, hoverinfo: "skip" },
       { type: "scatter", mode: "lines+markers", x: gens, y: h.map((r) => r.avg), name: "Average fitness", line: { color: "#eb6834", width: 2 }, marker: { size: 7, color: "#eb6834" }, hovertemplate: "Generation %{x}<br>Average fitness: %{y:.2f}<extra></extra>" },
-      { type: "scatter", mode: "lines+markers", x: gens, y: h.map((r) => r.best), name: "Best fitness", line: { color: "#2a78d6", width: 3 }, marker: { size: 9, color: "#2a78d6" }, hovertemplate: "Generation %{x}<br>Best fitness: %{y}<extra></extra>" },
+      { type: "scatter", mode: "lines+markers", x: gens, y: h.map((r) => r.best), name: "Best fitness", line: { color: "#2a78d6", width: 3 }, marker: { size: 9, color: "#2a78d6" }, hovertemplate: `Generation %{x}<br>Best fitness: %{y${S.mode === "partial" ? ":.2f" : ""}}<extra></extra>` },
     ], {
       height: 300, margin: { l: 50, r: 10, t: 10, b: 45 },
       legend: { orientation: "h", yanchor: "bottom", y: 1.02, x: 0 },
@@ -434,7 +437,7 @@
       renderWorkspace();
       return;
     } else if (act === "commit") {
-      const [a, b] = (UI.order.get(pk) || []).slice().sort((x, y) => x - y);
+      const [a, b] = UI.order.get(pk) || [];
       const cut = UI.cut.has(pk) ? UI.cut.get(pk) : Math.floor(S.L / 2);
       commitPair(a, b, cut, UI.mut.get(`${pk}_${a}_${b}_1`) || [], UI.mut.get(`${pk}_${a}_${b}_2`) || []);
       if (S.found) MG.balloons();
@@ -477,7 +480,7 @@
     render();
   });
   $("play-again").addEventListener("click", () => {
-    startGame(S.hidden, S.popSize, "", S.mode);
+    startGame(S.hidden, S.popSize, S.code, S.mode); // same class code → same start population
     if (S.found) MG.balloons();
     render();
   });
