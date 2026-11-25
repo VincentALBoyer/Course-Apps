@@ -7,9 +7,8 @@
  * IN2041: gene = one letter, chromosome = a candidate word, fitness =
  * letters correct AND in the right position.
  *
- * Candidate words are always plain A–Z (they're built from ALPHABET); only
- * the hidden word may contain other letters, so it's handled as an array
- * of characters for comparisons.
+ * Candidate words and the hidden word are both plain A–Z: the hidden word
+ * has its accents stripped (Ñ→N, Á→A) so the game is always winnable.
  */
 (function () {
   "use strict";
@@ -29,9 +28,10 @@
     return c ? new MG.PyRandom(MG.codeToSeed(c)) : new MG.PyRandom(null);
   }
 
-  /** Letters only, uppercased (Python: ch.isalpha() over raw.upper()). */
+  /** Uppercased, accents stripped (É→E, Ñ→N, Ü→U), then A–Z only, so the
+   *  hidden word always uses the same alphabet as the candidates. */
   function cleanHiddenWord(raw) {
-    return Array.from(String(raw).toUpperCase()).filter((ch) => /\p{L}/u.test(ch)).join("");
+    return String(raw).normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z]/g, "");
   }
 
   const chars = (w) => Array.from(w);
@@ -96,9 +96,15 @@
     const popFits = population.map((w) => computeFitness(w, hidden, mode));
     const weights = popFits.map((f) => f + 1e-6); // avoid an all-zero weight vector
 
+    const idx = population.map((_, i) => i);
     const offspring = [];
     for (let k = 0; k < Math.floor(popSize / 2); k++) {
-      const [pa, pb] = rng.choices(population, weights, 2);
+      // Two distinct parents, each fitness-weighted.
+      const [ia] = rng.choices(idx, weights, 1);
+      const rest = idx.filter((i) => i !== ia);
+      const [ib] = rng.choices(rest, rest.map((i) => weights[i]), 1);
+      const pa = population[ia];
+      const pb = population[ib];
       const cut = rng.randint(1, length - 1);
       for (let child of crossover(pa, pb, cut)) {
         const mutated = [];
