@@ -780,6 +780,11 @@
     window.scrollTo({ top: 0 });
   }
   $("start").addEventListener("click", onStart);
+  $("random-word").addEventListener("click", () => {
+    $("hidden-word").value = G.randomWord(); // stays hidden: the field shows dots
+    $("setup-error").hidden = true;
+    MG.toast("🎲 A secret word was chosen - press Start Game.");
+  });
   for (const id of ["hidden-word", "code"]) $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") onStart(); });
 
   const body = $("play-body");

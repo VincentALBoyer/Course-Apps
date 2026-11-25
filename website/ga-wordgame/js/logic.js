@@ -21,6 +21,22 @@
   const MAX_WORD_LEN = 8;
   const SCORING_LABELS = { exact: "Exact match (classic)", partial: "Partial credit (alphabet distance)" };
 
+  /** Common English words (4-6 letters, A-Z only) for the 🎲 Random word button. */
+  const WORD_BANK = (
+    "BIRD BOOK CAKE CITY DOOR FARM FISH GAME GOLD HAND HOME KING LAKE LAMP LION MILK MOON NOTE PARK " +
+    "RAIN ROAD ROCK ROSE SALT SHIP SNOW SONG STAR TREE WIND WOLF WOOD BEAR CORN DUCK FROG GIFT HILL " +
+    "APPLE BEACH BREAD BRICK CHAIR CLOCK CLOUD DANCE DREAM EARTH FIELD FLAME GHOST GRAPE GRASS HEART " +
+    "HORSE HOUSE LEMON LIGHT MAGIC MONEY MUSIC NIGHT OCEAN PAPER PIANO PLANT QUEEN RIVER ROBOT SHEEP " +
+    "SMILE SPACE STONE STORM SUGAR TABLE TIGER TOAST TRAIN WATER WHALE WORLD ZEBRA BRAIN CANDY CHESS " +
+    "ANIMAL BASKET BRIDGE BUTTER CAMERA CANDLE CASTLE CHEESE CIRCLE COFFEE COOKIE DESERT DINNER DOCTOR " +
+    "DRAGON FOREST FLOWER GARDEN GUITAR HAMMER ISLAND JACKET JUNGLE LETTER MARKET MIRROR MONKEY NUMBER " +
+    "ORANGE PENCIL PEPPER PLANET POCKET RABBIT ROCKET SCHOOL SILVER SPIDER SPRING SUMMER TICKET TOMATO " +
+    "TURTLE WINDOW WINTER YELLOW BUTTON PUZZLE"
+  ).split(" ");
+
+  /** A random word from WORD_BANK (not tied to the class code, so it stays secret). */
+  const randomWord = () => WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+
   /** Seeded from `code` if given, otherwise unpredictable. */
   function makeRng(code) {
     const c = String(code || "").trim();
@@ -166,7 +182,7 @@
   GA.logic = {
     ALPHABET, POP_SIZE_CHOICES, MIN_WORD_LEN, MAX_WORD_LEN, SCORING_LABELS,
     PARENT_METHODS, SURVIVOR_RULES,
-    makeRng, cleanHiddenWord, chars, randomPopulation, fitness, computeFitness, crossover, mutate,
+    WORD_BANK, randomWord, makeRng, cleanHiddenWord, chars, randomPopulation, fitness, computeFitness, crossover, mutate,
     populationStats, pickParent, selectSurvivors, autoRunGeneration,
   };
 })();
