@@ -38,7 +38,7 @@
     ["Pheromone τ", "A number on every edge, the colony's <b>shared memory</b>. It starts at 1 everywhere. On the map, thicker and darker orange edges have more pheromone."],
     ["Visibility η = 1 / d", "Local, greedy information: a closer city is more attractive. It never changes during the run."],
     ["Choice rule", "From city i, an ant goes to an unvisited city j with probability<br><b>P = τ<sub>ij</sub><sup>α</sup> · η<sub>ij</sub><sup>β</sup> / Σ</b><br>where Σ adds the same product over all unvisited cities. The ant spins a roulette wheel with those probabilities, so even an unlikely city is sometimes chosen."],
-    ["α and β", "<b>α</b> = how much ants follow pheromone (exploitation of what the colony learned). <b>β</b> = how much they prefer close cities (greedy heuristic). α = 0 gives a randomized greedy; β = 0 gives a colony that must learn everything from scratch."],
+    ["α and β", "<b>α</b> = how much ants follow pheromone (exploitation of what the colony learned).<br><b>β</b> = how much they prefer close cities (greedy heuristic).<br>α = 0 gives a randomized greedy; β = 0 gives a colony that must learn everything from scratch."],
     ["Evaporation ρ", "After each iteration, every edge keeps only (1 − ρ) of its pheromone. Evaporation lets the colony <b>forget</b> bad early choices. Too little and it locks in early; too much and it can't remember anything. τ never drops below 0.001, so no edge becomes impossible."],
     ["Deposit Q / L", "After evaporation, every ant of the iteration adds Q / L on each edge of its tour (L = its tour length). Shorter tour, more pheromone. Here Q = the greedy tour's length, so an ant as good as greedy deposits exactly 1."],
     ["Iteration", "One iteration = every ant builds a full tour using the <b>same</b> pheromone, then pheromone is updated once. Ants within an iteration don't influence each other."],
@@ -161,7 +161,7 @@
     if (!S.best || len < S.best.len - 1e-9) {
       S.best = { tour: tour.slice(), len, who, iter: S.iter + 1 };
       S.bestId++;
-      if (S.opt && len <= S.opt.len + 1e-9 && !S.optCelebrated && S.show.best) {
+      if (S.opt && len <= S.opt.len + 1e-9 && !S.optCelebrated) {
         S.optCelebrated = true;
         MG.toast(who === "you" ? "🎉 Your ant found the optimal tour!" : `🎉 The colony found the optimal tour in iteration ${S.iter + 1}!`);
         if (who === "you") MG.balloons();
@@ -598,7 +598,7 @@
         const last = S.history[S.history.length - 1];
         h += `<p class="ac-say">Last iteration: best ant <b>${fmt(last.best)}</b>, average <b>${fmt(last.mean)}</b>.</p>`;
       }
-      if (S.best && S.show.best) {
+      if (S.best) {
         const gap = S.opt ? (S.best.len - S.opt.len) / S.opt.len : null;
         h += `<div class="ac-best"><div class="ac-card-title"><span><i class="lg best"></i> Best tour · ${fmt(S.best.len)}</span>
           ${gap != null ? `<span class="badge ${gap < 1e-9 ? "ok" : ""}">${gap < 1e-9 ? "✓ optimal" : "+" + (gap * 100).toFixed(1) + "% vs optimum"}</span>` : ""}</div>
@@ -613,7 +613,6 @@
   // ── header, dots, chart, log ──────────────────────────────────────────
   function renderMetrics() {
     $("m-iter").textContent = S.iter;
-    $("kpi-best").hidden = !S.show.best;
     $("m-best").textContent = S.best ? fmt(S.best.len) : "—";
     const gapEl = $("m-gap");
     if (!S.best) { gapEl.textContent = ""; gapEl.className = ""; }
@@ -646,8 +645,7 @@
       : { pher: "#c77d12", best: "#1a9c5e", iter: "#2a78d6", opt: "#8a4fd6" };
     const x = S.history.map((h) => h.iter);
     const traces = [];
-    // Earlier runs are "best so far" curves too, so they hide with the best tour.
-    if (S.show.best) S.runs.forEach((r, k) => traces.push({
+    S.runs.forEach((r, k) => traces.push({
       x: r.y.map((_, i) => i + 1), y: r.y, name: r.name, mode: "lines",
       line: { width: 1.5, color: c.muted, dash: ["dot", "dash", "longdash", "dashdot"][k % 4] }, opacity: 0.75,
     }));
@@ -655,7 +653,7 @@
       { x, y: S.history.map((h) => h.mean), name: "Average ant", mode: "lines", line: { width: 1.5, color: col.pher } },
       { x, y: S.history.map((h) => h.best), name: "Best ant of the iteration", mode: "lines", line: { width: 1, color: col.iter } },
     );
-    if (S.show.best) traces.push({ x, y: S.history.map((h) => h.bestSoFar), name: "Best so far", mode: "lines", line: { width: 3, color: col.best, shape: "hv" } });
+    traces.push({ x, y: S.history.map((h) => h.bestSoFar), name: "Best so far", mode: "lines", line: { width: 3, color: col.best, shape: "hv" } });
     const yours = S.history.filter((h) => h.you != null);
     if (yours.length) traces.push({ x: yours.map((h) => h.iter), y: yours.map((h) => h.you), name: "🙋 Your ant", mode: "markers", marker: { size: 11, symbol: "star", color: col.opt } });
     const maxX = Math.max(10, x.length, ...S.runs.map((r) => r.y.length));
@@ -687,7 +685,7 @@
       { key: "best", label: "Best ant", fmt },
       { key: "mean", label: "Average", fmt },
       { key: "worst", label: "Worst ant", fmt },
-      ...(S.show.best ? [{ key: "bestSoFar", label: "Best so far", fmt }] : []),
+      { key: "bestSoFar", label: "Best so far", fmt },
       { key: "you", label: "🙋 You", fmt },
     ], rows);
     $("log-wrap").hidden = !rows.length;
@@ -806,10 +804,7 @@
   for (const [id, key] of [["show-pher", "pher"], ["show-ants", "ants"], ["show-best", "best"], ["show-opt", "opt"]]) {
     $(id).addEventListener("change", () => {
       S.show[key] = $(id).checked;
-      if (key !== "best") return renderMap();
-      // The best tour hides everywhere, not only on the map.
-      renderMetrics(); renderMap(); renderPanel(); renderChart(); renderTable();
-      status(S.show.best ? "Best tour shown again." : "Best tour hidden everywhere: map, header, panel, chart and log.");
+      renderMap();
     });
   }
 
