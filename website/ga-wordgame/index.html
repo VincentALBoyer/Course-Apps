@@ -44,9 +44,13 @@
           <p>The game starts fully manual. Once you've seen every operator by hand, switch to the <strong>🤖 Auto mode</strong> tab
           to watch the GA run step by step with roulette-wheel or tournament selection, different survivor rules and mutation rates.</p>
         </div>
-        <label class="field"><span>Hidden word (kept secret - shown as dots)</span>
-          <input type="password" id="hidden-word" maxlength="8" autocomplete="off" /></label>
-        <p class="caption">Letters only, 4-8 letters (e.g. PLANET). Accents are removed (Ñ→N, Á→A).</p>
+        <label class="field" for="hidden-word"><span>Hidden word (kept secret - shown as dots)</span></label>
+        <div class="word-row">
+          <input type="password" id="hidden-word" maxlength="8" autocomplete="off" />
+          <button id="random-word" class="btn" type="button">🎲 Random word</button>
+        </div>
+        <p class="caption" id="word-hint">Letters only, 4-8 letters (e.g. PLANET). Accents are removed (Ñ→N, Á→A).
+          Or let 🎲 pick a secret English word of 4-6 letters - nobody sees it until the game ends.</p>
         <fieldset class="segmented">
           <legend>Population size (kept even for clean parent pairing)</legend>
           <label><input type="radio" name="pop" value="4" /> 4</label>
