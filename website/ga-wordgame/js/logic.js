@@ -7,9 +7,8 @@
  * IN2041: gene = one letter, chromosome = a candidate word, fitness =
  * letters correct AND in the right position.
  *
- * Candidate words are always plain A–Z (they're built from ALPHABET); only
- * the hidden word may contain other letters, so it's handled as an array
- * of characters for comparisons.
+ * Candidate words and the hidden word are both plain A–Z: the hidden word
+ * has its accents stripped (Ñ→N, Á→A) so the game is always winnable.
  */
 (function () {
   "use strict";
@@ -21,7 +20,6 @@
   const MIN_WORD_LEN = 4;
   const MAX_WORD_LEN = 8;
   const SCORING_LABELS = { exact: "Exact match (classic)", partial: "Partial credit (alphabet distance)" };
-  const MAX_AUTOPLAY_GENERATIONS = 20;
 
   /** Seeded from `code` if given, otherwise unpredictable. */
   function makeRng(code) {
@@ -29,9 +27,10 @@
     return c ? new MG.PyRandom(MG.codeToSeed(c)) : new MG.PyRandom(null);
   }
 
-  /** Letters only, uppercased (Python: ch.isalpha() over raw.upper()). */
+  /** Uppercased, accents stripped (É→E, Ñ→N, Ü→U), then A–Z only, so the
+   *  hidden word always uses the same alphabet as the candidates. */
   function cleanHiddenWord(raw) {
-    return Array.from(String(raw).toUpperCase()).filter((ch) => /\p{L}/u.test(ch)).join("");
+    return String(raw).normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z]/g, "");
   }
 
   const chars = (w) => Array.from(w);
@@ -88,36 +87,86 @@
     return { best: Math.max(...fits), avg: MG.pySum(fits) / fits.length, fits };
   }
 
-  /** One full generation with no human input (auto-play): fitness-weighted
-   *  parent selection, random single-point crossover, per-gene mutation at
-   *  ~1/length odds, then elitist survivor selection (offspring win ties). */
-  function autoRunGeneration(population, hidden, popSize, mode, rng) {
-    const length = chars(hidden).length;
-    const popFits = population.map((w) => computeFitness(w, hidden, mode));
-    const weights = popFits.map((f) => f + 1e-6); // avoid an all-zero weight vector
+  // ── operators used by auto mode ──────────────────────────────────────
+  const PARENT_METHODS = { random: "Random", roulette: "Roulette wheel", tournament: "Tournament" };
+  const SURVIVOR_RULES = { best: "Best of all", offspring: "Offspring only", elitism: "Elitism" };
+  const ROULETTE_EPS = 1e-6; // so fitness-0 members (and an all-zero population) still have a slice
 
+  /** Pick one parent index from `fits`, never `exclude` (so the two parents
+   *  of a pair differ). Returns the pick plus what's needed to show *why*:
+   *  roulette → each slice's share and where the wheel stopped (0..1);
+   *  tournament → the contestants drawn. */
+  function pickParent(fits, exclude, method, tourK, rng) {
+    const pool = fits.map((_, i) => i).filter((i) => i !== exclude);
+    if (method === "random") return { method, index: rng.choice(pool), pool };
+    if (method === "tournament") {
+      const contestants = rng.sample(pool, Math.max(1, Math.min(tourK, pool.length)));
+      let index = contestants[0];
+      for (const c of contestants) if (fits[c] > fits[index]) index = c; // ties: first drawn wins
+      return { method, index, pool, contestants };
+    }
+    const w = pool.map((i) => fits[i] + ROULETTE_EPS);
+    const total = MG.pySum(w);
+    const spin = rng.random() * total;
+    let index = pool[pool.length - 1];
+    let acc = 0;
+    for (let j = 0; j < pool.length; j++) {
+      acc += w[j];
+      if (spin < acc) { index = pool[j]; break; }
+    }
+    return { method, index, pool, shares: pool.map((i, j) => ({ i, p: w[j] / total })), spin: spin / total };
+  }
+
+  /** Survivor selection. Returns the kept parent and offspring indices.
+   *  best      — parents and offspring compete, the popSize fittest stay (offspring win ties);
+   *  offspring — the offspring replace every parent (generational);
+   *  elitism   — the eliteK best parents stay, the rest are the best offspring. */
+  function selectSurvivors(popFits, offFits, rule, eliteK, popSize) {
+    const ranked = (fits) => fits.map((f, i) => [i, f]).sort((x, y) => y[1] - x[1]).map((x) => x[0]);
+    if (rule === "offspring") return { p: new Set(), o: new Set(ranked(offFits).slice(0, popSize)) };
+    if (rule === "elitism") {
+      const k = Math.max(0, Math.min(eliteK, popSize));
+      return { p: new Set(ranked(popFits).slice(0, k)), o: new Set(ranked(offFits).slice(0, popSize - k)) };
+    }
+    const cands = popFits.map((f, i) => ["p", i, f, 1]).concat(offFits.map((f, i) => ["o", i, f, 0]));
+    cands.sort((x, y) => (y[2] - x[2]) || (x[3] - y[3]));
+    const keep = { p: new Set(), o: new Set() };
+    for (const [src, i] of cands.slice(0, popSize)) keep[src].add(i);
+    return keep;
+  }
+
+  /** One full generation with no human input (auto mode).
+   *  cfg = { parent, tourK, survivor, eliteK, pMut } — pMut is the per-gene
+   *  mutation probability. Every step is returned so the page can show it. */
+  function autoRunGeneration(population, hidden, popSize, mode, rng, cfg) {
+    const length = chars(hidden).length;
+    const fits = population.map((w) => computeFitness(w, hidden, mode));
+
+    const pairs = [];
     const offspring = [];
     for (let k = 0; k < Math.floor(popSize / 2); k++) {
-      const [pa, pb] = rng.choices(population, weights, 2);
+      const a = pickParent(fits, -1, cfg.parent, cfg.tourK, rng);
+      const b = pickParent(fits, a.index, cfg.parent, cfg.tourK, rng);
       const cut = rng.randint(1, length - 1);
-      for (let child of crossover(pa, pb, cut)) {
+      pairs.push({ a, b, cut });
+      for (let child of crossover(population[a.index], population[b.index], cut)) {
         const mutated = [];
-        for (let i = 0; i < length; i++) if (rng.random() < 1.0 / length) mutated.push(i);
+        for (let i = 0; i < length; i++) if (rng.random() < cfg.pMut) mutated.push(i);
         for (const pos of mutated) child = mutate(child, pos, rng);
         offspring.push({ word: child, fitness: computeFitness(child, hidden, mode), mutated: new Set(mutated) });
       }
     }
 
-    const candidates = population.map((w, i) => [w, popFits[i], 1]).concat(offspring.map((o) => [o.word, o.fitness, 0]));
-    candidates.sort((x, y) => (y[1] - x[1]) || (x[2] - y[2]));
-    const next = candidates.slice(0, popSize).map((c) => c[0]);
+    const keep = selectSurvivors(fits, offspring.map((o) => o.fitness), cfg.survivor, cfg.eliteK, popSize);
+    const next = population.filter((_, i) => keep.p.has(i)).concat(offspring.filter((_, i) => keep.o.has(i)).map((o) => o.word));
     next.sort((x, y) => computeFitness(y, hidden, mode) - computeFitness(x, hidden, mode));
-    return { offspring, population: next };
+    return { fits, pairs, offspring, keep, population: next };
   }
 
   GA.logic = {
-    ALPHABET, POP_SIZE_CHOICES, MIN_WORD_LEN, MAX_WORD_LEN, SCORING_LABELS, MAX_AUTOPLAY_GENERATIONS,
+    ALPHABET, POP_SIZE_CHOICES, MIN_WORD_LEN, MAX_WORD_LEN, SCORING_LABELS,
+    PARENT_METHODS, SURVIVOR_RULES,
     makeRng, cleanHiddenWord, chars, randomPopulation, fitness, computeFitness, crossover, mutate,
-    populationStats, autoRunGeneration,
+    populationStats, pickParent, selectSurvivors, autoRunGeneration,
   };
 })();
