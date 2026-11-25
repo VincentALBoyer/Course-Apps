@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ant Colony Optimization</title>
+  <meta name="description" content="Watch a colony of virtual ants find a short tour through cities with pheromone trails, or be one of the ants yourself." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐜</text></svg>" />
+  <script>
+    try {
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="../shared/base.css?v=dev" />
+  <link rel="stylesheet" href="css/style.css?v=dev" />
+  <script defer src="../shared/vendor/plotly-basic.min.js?v=dev"></script>
+  <script defer src="../shared/sha256.js?v=dev"></script>
+  <script defer src="../shared/rng.js?v=dev"></script>
+  <script defer src="../shared/ui.js?v=dev"></script>
+  <script defer src="js/logic.js?v=dev"></script>
+  <script defer src="js/app.js?v=dev"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="home-link" href="../">← All games</a>
+      <span class="brand">🐜 Ant Colony: The Pheromone Trail</span>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
+    </div>
+  </header>
+
+  <main id="main" class="with-aside">
+    <div>
+      <!-- ─────────────────────────── Setup ─────────────────────────── -->
+      <section id="phase-setup" class="intro">
+        <h1>🐜 Ant Colony: The Pheromone Trail</h1>
+        <div class="intro-hero">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">Ant colony optimization · explore, deposit, evaporate</p>
+            <p class="intro-lead">Find the <strong>shortest tour</strong> that visits every city once and returns home.
+              No single ant is smart: each one picks its next city <strong>at random</strong>, favoring cities that are
+              <strong>close</strong> and edges with a lot of <strong>pheromone</strong>. Short tours get more pheromone, so
+              over the iterations the colony's trail converges on a good tour.</p>
+          </div>
+          <svg class="intro-art ac-art" viewBox="0 0 200 140" role="img" aria-label="Six cities joined by a thick pheromone trail, thin unused edges, and an ant">
+            <g class="ac-art-faint">
+              <line x1="30" y1="30" x2="150" y2="110" /><line x1="95" y1="18" x2="40" y2="105" /><line x1="170" y1="45" x2="40" y2="105" /><line x1="30" y1="30" x2="170" y2="45" />
+            </g>
+            <polygon class="ac-art-trail" points="30,30 95,18 170,45 150,110 95,120 40,105" />
+            <g class="ac-art-city">
+              <circle cx="30" cy="30" r="9" /><circle cx="95" cy="18" r="9" /><circle cx="170" cy="45" r="9" />
+              <circle cx="150" cy="110" r="9" /><circle cx="95" cy="120" r="9" /><circle cx="40" cy="105" r="9" />
+            </g>
+            <g transform="translate(133 31.5) rotate(20) scale(3.2)" class="ant-body">
+              <path class="ant-legs" d="M-1.3 0 L-2.4 -1.9 M-1.3 0 L-2.4 1.9 M0 0 L0.1 -2.1 M0 0 L0.1 2.1 M1 0 L2.1 -1.7 M1 0 L2.1 1.7" />
+              <path class="ant-antenna" d="M1.8 -0.3 Q2.5 -1.3 3.2 -1.1 M1.8 0.3 Q2.5 1.3 3.2 1.1" />
+              <ellipse cx="-1.9" cy="0" rx="1.35" ry="0.95" /><ellipse cx="0" cy="0" rx="0.75" ry="0.55" /><circle cx="1.35" cy="0" r="0.68" />
+            </g>
+          </svg>
+        </div>
+
+        <h3 class="intro-heading">How it works</h3>
+        <ol class="intro-steps">
+          <li>
+            <span class="step-icon" aria-hidden="true">🎲</span>
+            <strong>Build a tour</strong>
+            <span>Each ant starts at a random city and picks the next one with probability ∝ <b>τ<sup>α</sup> · η<sup>β</sup></b>.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">📏</span>
+            <strong>η: distance</strong>
+            <span><b>η = 1/d</b>: closer cities are more attractive. <b>β</b> sets how much that matters.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">🟠</span>
+            <strong>τ: pheromone</strong>
+            <span>The colony's memory of good edges. <b>α</b> sets how much the ants trust it.</span>
+          </li>
+          <li>
+            <span class="step-icon" aria-hidden="true">💨</span>
+            <strong>Evaporate &amp; deposit</strong>
+            <span>After each iteration, a share <b>ρ</b> of all pheromone evaporates, then each ant lays <b>Q / L</b> on its tour.</span>
+          </li>
+        </ol>
+
+        <h3 class="intro-heading">Choose your map</h3>
+        <div class="intro-modes three" role="radiogroup" aria-label="Difficulty">
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="easy" checked />
+            <div class="mode-card-head"><span class="mode-name">Easy</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Cities</span><b>8</b></li>
+              <li><span>Ants per iteration</span><b>8</b></li>
+              <li><span>Possible tours</span><b>2,520</b></li>
+            </ul>
+            <p class="mode-desc">Small enough to follow every ant's choices by hand.</p>
+          </label>
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="medium" />
+            <div class="mode-card-head"><span class="mode-name">Medium</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Cities</span><b>14</b></li>
+              <li><span>Ants per iteration</span><b>10</b></li>
+              <li><span>Possible tours</span><b>≈ 3.1 billion</b></li>
+            </ul>
+            <p class="mode-desc">The colony finds the optimum after checking only a tiny fraction of tours.</p>
+          </label>
+          <label class="mode-card choice">
+            <input type="radio" name="difficulty" value="hard" />
+            <div class="mode-card-head"><span class="mode-name">Hard</span><span class="mode-check" aria-hidden="true"></span></div>
+            <ul class="mode-facts">
+              <li><span>Cities</span><b>26</b></li>
+              <li><span>Ants per iteration</span><b>15</b></li>
+              <li><span>Possible tours</span><b>≈ 7.8 × 10<sup>24</sup></b></li>
+            </ul>
+            <p class="mode-desc">Far too many tours to check; even the optimum is unknown here.</p>
+          </label>
+        </div>
+        <p class="caption">A tour and its reverse count once: n cities give (n − 1)! / 2 possible tours.</p>
+
+        <h3 class="intro-heading">Start</h3>
+        <div class="tool-card ac-start">
+          <label class="field"><span>🔑 Game code (optional)</span>
+            <input type="text" id="code" maxlength="12" placeholder="Leave blank for a random code" autocomplete="off" spellcheck="false" /></label>
+          <p class="mode-desc">Same code, same map. With the same settings, the colony also makes the same random
+            choices, so classmates can compare runs exactly.</p>
+          <button id="start" class="btn primary">▶ Start</button>
+        </div>
+      </section>
+
+      <!-- ────────────────────────── Colony ─────────────────────────── -->
+      <section id="phase-colony" hidden>
+        <div class="ac-head">
+          <div class="ac-title">
+            <h2 id="colony-title"></h2>
+            <p class="ac-sub">Game code <b id="m-code"></b> <button id="copy-code" class="linklike" type="button" title="Copy the game code">📋 copy</button></p>
+          </div>
+          <div class="ac-kpis">
+            <div class="kpi"><span>Iterations done</span><b id="m-iter"></b></div>
+            <div class="kpi kpi-best" id="kpi-best"><span>Best tour</span><b id="m-best"></b><em id="m-gap"></em></div>
+            <div class="kpi" title="Start at A, always go to the nearest unvisited city"><span>Greedy</span><b id="m-greedy"></b></div>
+            <div class="kpi"><span>Optimum</span><b id="m-opt"></b></div>
+            <button id="new-game" class="btn small" type="button">↺ New game</button>
+          </div>
+        </div>
+
+        <div class="ac-stage">
+          <!-- Map -->
+          <div class="ac-map-card">
+            <div class="ac-chips" role="group" aria-label="Show on the map">
+              <label class="chip"><input type="checkbox" id="show-pher" checked /><i class="lg pher" id="edge-chip-lg"></i><span id="edge-chip-txt">Pheromone</span></label>
+              <label class="chip"><input type="checkbox" id="show-ants" checked /><i class="lg flash"></i>Last iteration</label>
+              <label class="chip" title="Show or hide the best tour found so far everywhere: map, header, panel, chart and log"><input type="checkbox" id="show-best" checked /><i class="lg best"></i>Best tour</label>
+              <label class="chip" id="show-opt-wrap"><input type="checkbox" id="show-opt" /><i class="lg opt"></i>Optimal tour</label>
+            </div>
+            <svg id="map" class="ac-map" viewBox="-5 -5 110 110" role="img" aria-label="Map of the cities with pheromone trails"></svg>
+            <div id="map-status" class="ac-map-status" aria-live="polite"></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="ac-side">
+            <div class="ac-card">
+              <div class="ac-iter-row">
+                <span id="iter-label" class="ac-iter-label"></span>
+                <span id="ant-dots" class="ant-dots" aria-hidden="true"></span>
+              </div>
+              <div class="ac-btn-grid">
+                <button id="watch" class="act primary" type="button" title="Animate one ant, with its probabilities at every step (N)">
+                  <span class="act-ico">🐜</span><span class="act-txt"><b>Watch next ant</b><small>step by step</small></span><kbd>N</kbd></button>
+                <button id="be-ant" class="act" type="button" title="Build the next ant's tour yourself (Y)">
+                  <span class="act-ico">🙋</span><span class="act-txt"><b>Be the next ant</b><small>you choose</small></span><kbd>Y</kbd></button>
+                <button id="finish-iter" class="act" type="button" title="The remaining ants build their tours, then pheromone is updated (F)">
+                  <span class="act-ico">⏭</span><span class="act-txt"><b>Finish iteration</b><small>all remaining ants</small></span><kbd>F</kbd></button>
+                <button id="play" class="act" type="button" title="Run iterations until you pause or the colony stagnates (Space)">
+                  <span class="act-ico" id="play-ico">▶</span><span class="act-txt"><b id="play-txt">Play</b><small id="play-sub">run iterations</small></span><kbd>Space</kbd></button>
+              </div>
+              <div class="ac-actions-foot">
+                <label class="ac-speed"><span>Speed</span>
+                  <input type="range" id="speed" min="1" max="5" step="1" value="3" /><output id="speed-out"></output></label>
+                <button id="reset" class="btn small" type="button" title="Pheromone back to 1 everywhere; this run stays on the chart for comparison (R)">↺ Reset colony</button>
+              </div>
+            </div>
+
+            <div id="panel" class="ac-card ac-panel"></div>
+
+            <div class="ac-card ac-settings">
+              <div class="ac-card-title"><span>⚙️ Settings</span><button id="defaults" class="linklike" type="button">restore defaults</button></div>
+              <p class="ac-formula" id="formula"></p>
+              <fieldset class="segmented ac-view">
+                <legend>The map's line thickness shows</legend>
+                <label title="The colony's memory. Changes only when an iteration ends (deposit and evaporation)."><input type="radio" name="edge-view" value="pher" checked /><i class="lg pher"></i><span>Pheromone τ</span></label>
+                <label title="An ant's chance of taking the edge, P ∝ τ^α · η^β, from whichever end likes it more. Changes live when you move α or β."><input type="radio" name="edge-view" value="attr" /><i class="lg attr"></i><span>Ant's choice P ∝ τ<sup>α</sup>·η<sup>β</sup></span></label>
+              </fieldset>
+              <div class="ac-params">
+                <label class="field" title="Weight of pheromone in the choice rule"><span>α pheromone weight <output id="alpha-out"></output></span>
+                  <input type="range" id="alpha" min="0" max="5" step="0.5" /></label>
+                <label class="field" title="Weight of closeness (η = 1/d) in the choice rule"><span>β distance weight <output id="beta-out"></output></span>
+                  <input type="range" id="beta" min="0" max="6" step="0.5" /></label>
+                <label class="field" title="Share of pheromone that evaporates after each iteration"><span>ρ evaporation <output id="rho-out"></output></span>
+                  <input type="range" id="rho" min="0" max="1" step="0.05" /></label>
+                <label class="field" title="How many ants build a tour before pheromone is updated"><span>Ants per iteration <output id="m-out"></output></span>
+                  <input type="range" id="ants" min="1" max="30" step="1" /></label>
+              </div>
+              <label class="switch" title="The best tour found so far also deposits pheromone each iteration, as much as n extra ants"><input type="checkbox" id="elitist" /><span class="switch-track"></span>⭐ Elitist ant</label>
+              <p class="caption ac-note">α and β apply from the next ant; ρ and the elitist ant at the next pheromone update. Use ↺ Reset colony to start a fair comparison.</p>
+            </div>
+          </div>
+        </div>
+
+        <details class="expander" id="experiments">
+          <summary>🧪 Try these experiments</summary>
+          <p class="caption">Each one resets the colony with new settings and starts it. Your previous run stays on the chart so you can compare.</p>
+          <div class="ac-presets" id="presets"></div>
+        </details>
+
+        <h3>📈 Convergence</h3>
+        <div id="chart" class="chart"></div>
+        <p class="caption" id="chart-caption"></p>
+        <details class="expander" id="log-wrap">
+          <summary>📋 Iteration log</summary>
+          <div class="table-wrap"><table id="history"></table></div>
+        </details>
+        <p class="caption ac-keys">Keyboard: <kbd>N</kbd> watch ant · <kbd>S</kbd> skip · <kbd>Y</kbd> be the ant · <kbd>C</kbd> let chance decide · <kbd>Z</kbd> undo · <kbd>Esc</kbd> cancel · <kbd>F</kbd> finish iteration · <kbd>Space</kbd> play / pause · <kbd>R</kbd> reset</p>
+      </section>
+    </div>
+
+    <aside>
+      <div class="panel concepts">
+        <h3>📘 Concepts</h3>
+        <p class="caption">Click any topic for a quick explanation.</p>
+        <div id="concepts"></div>
+      </div>
+    </aside>
+  </main>
+  <div id="toast-stack" aria-live="polite"></div>
+  <noscript><p class="alert error">This page needs JavaScript to run.</p></noscript>
+</body>
+</html>
