@@ -46,6 +46,11 @@
 /* Parent buttons show their role ("M3 · A"). */
 .member { grid-template-columns: 68px minmax(0, 1fr) auto; }
 
+/* Hidden word + random word button */
+.word-row { display: flex; gap: 8px; align-items: center; max-width: 520px; margin-top: -6px; }
+.word-row input { flex: 1; min-width: 0; }
+.word-row .btn { margin: 0; white-space: nowrap; }
+
 /* Manual / Auto tabs */
 .view-tabs { margin: 0 0 16px; }
 
