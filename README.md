@@ -56,4 +56,8 @@ Greedy_BinPacking_App/   Streamlit bin packing app, no longer maintained;
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+© 2026 Vincent Boyer. Licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/); full text in [LICENSE](LICENSE).
+You may share and adapt these apps for non-commercial purposes, with credit, under the same license.
+Third-party libraries keep their own licenses: `website/shared/vendor/plotly-basic.min.js` (Plotly.js, MIT) and
+`website/shared/vendor/xlsx.full.min.js` (SheetJS Community Edition, Apache 2.0).
+Versions published before November 26, 2026 were released under the MIT License.
