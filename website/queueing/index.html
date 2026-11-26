@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Queue Lab</title>
+  <meta name="description" content="Queueing theory at a coffee counter: simulate a line, compare it with the formulas, see why waits explode near 100% utilization, and staff a café for a day." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>" />
+  <script>
+    try {
+      var t = localStorage.getItem("mg-theme") || localStorage.getItem("bp-theme");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="../shared/base.css?v=dev" />
+  <link rel="stylesheet" href="css/style.css?v=dev" />
+  <script defer src="../shared/vendor/plotly-basic.min.js?v=dev"></script>
+  <script defer src="../shared/sha256.js?v=dev"></script>
+  <script defer src="../shared/rng.js?v=dev"></script>
+  <script defer src="../shared/ui.js?v=dev"></script>
+  <script defer src="js/logic.js?v=dev"></script>
+  <script defer src="js/simulate.js?v=dev"></script>
+  <script defer src="js/explore.js?v=dev"></script>
+  <script defer src="js/staffing.js?v=dev"></script>
+  <script defer src="js/app.js?v=dev"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="home-link" href="../">← All games</a>
+      <span class="brand">☕ Queue Lab</span>
+      <nav class="modes" role="tablist" aria-label="Mode">
+        <button role="tab" data-mode="simulate" aria-selected="true">🎬 Simulate</button>
+        <button role="tab" data-mode="explore" aria-selected="false">📈 Explore</button>
+        <button role="tab" data-mode="staffing" aria-selected="false">🎮 Staffing challenge</button>
+      </nav>
+      <button id="theme-toggle" class="theme-toggle" type="button"></button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ─────────────────────────── Simulate ─────────────────────────── -->
+    <section id="mode-simulate" role="tabpanel">
+      <div class="ql-head">
+        <h1>☕ The coffee counter</h1>
+        <p class="subtitle">Customers arrive, wait in line, get served and leave. Press <b>Play</b>, then change the
+          settings while it runs and watch the line react. The table compares what the simulation measures with what
+          queueing theory predicts.</p>
+      </div>
+
+      <div class="ql-stage">
+        <div class="ql-card ql-shop-card">
+          <div class="ql-shop-top">
+            <span class="ql-pill" id="sim-clock" title="Simulated time since the start">⏱ 0 min</span>
+            <span class="ql-pill" id="sim-model" title="Kendall notation: arrivals / service / baristas"></span>
+            <span class="ql-pill" id="sim-count" title="Customers in the shop now"></span>
+            <span class="ql-load" id="sim-load"></span>
+          </div>
+          <svg id="shop" class="ql-shop" viewBox="0 0 420 220" role="img" aria-label="The café: customers enter on the left, wait in line, and are served at the counters on the right"></svg>
+          <div class="ql-legend" aria-hidden="true">
+            <span><i class="dot w0"></i>waiting &lt; 2 min</span>
+            <span><i class="dot w1"></i>2–5 min</span>
+            <span><i class="dot w2"></i>over 5 min</span>
+            <span><i class="dot srv"></i>being served</span>
+          </div>
+          <div class="ql-controls">
+            <button id="sim-play" class="btn primary" type="button" title="Play / pause (Space)">▶ Play</button>
+            <button id="sim-ff" class="btn" type="button" title="Jump ahead 1,000 customers without animation">⏩ +1,000 customers</button>
+            <button id="sim-restart" class="btn" type="button" title="Start again with the same customers (same arrival times and orders)">↺ Restart</button>
+            <label class="ql-speed"><span>Speed</span>
+              <input type="range" id="sim-speed" min="0" max="6" step="1" value="3" /><output id="sim-speed-out"></output></label>
+          </div>
+        </div>
+
+        <div class="ql-side">
+          <div class="ql-card">
+            <div class="ql-card-title"><span>⚙️ Settings</span><button id="sim-defaults" class="linklike" type="button">restore defaults</button></div>
+            <label class="field"><span>λ arrivals per hour <output id="lam-out"></output></span>
+              <input type="range" id="lam" min="5" max="150" step="1" /></label>
+            <label class="field"><span>Mean service time <output id="svc-out"></output></span>
+              <input type="range" id="svc" min="0.5" max="8" step="0.25" /></label>
+            <label class="field"><span>c baristas <output id="c-out"></output></span>
+              <input type="range" id="c" min="1" max="6" step="1" /></label>
+            <fieldset class="segmented">
+              <legend>Lines</legend>
+              <label><input type="radio" name="layout" value="shared" />One shared line</label>
+              <label><input type="radio" name="layout" value="separate" />A line per barista</label>
+            </fieldset>
+            <fieldset class="segmented" id="choice-wrap">
+              <legend>Customers pick a line</legend>
+              <label><input type="radio" name="choice" value="shortest" />The shortest</label>
+              <label><input type="radio" name="choice" value="random" />At random</label>
+            </fieldset>
+            <fieldset class="segmented">
+              <legend>Arrivals</legend>
+              <label title="Exponential gaps (Poisson process): M"><input type="radio" name="arr" value="random" />🎲 Random</label>
+              <label title="Erlang-4 gaps: less variable, E₄"><input type="radio" name="arr" value="steady" />〰️ Steady</label>
+              <label title="Exactly equal gaps: D"><input type="radio" name="arr" value="clock" />⏰ Clockwork</label>
+            </fieldset>
+            <fieldset class="segmented">
+              <legend>Service times</legend>
+              <label title="Exponential: M"><input type="radio" name="svcv" value="random" />🎲 Random</label>
+              <label title="Erlang-4: less variable, E₄"><input type="radio" name="svcv" value="steady" />〰️ Steady</label>
+              <label title="Always the same: D"><input type="radio" name="svcv" value="clock" />⏰ Clockwork</label>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+
+      <details class="expander" id="sim-presets-wrap">
+        <summary>🧪 Try these experiments</summary>
+        <p class="caption">Each one restarts the café with the same customers and plays it.</p>
+        <div class="ql-presets" id="sim-presets"></div>
+      </details>
+
+      <div class="ql-results">
+        <div class="ql-card">
+          <div class="ql-card-title"><span>📊 Measured vs theory</span><span class="ql-since" id="sim-since"></span></div>
+          <div class="table-wrap"><table id="sim-table"></table></div>
+          <div id="sim-alert"></div>
+          <p class="caption" id="sim-note"></p>
+        </div>
+        <div class="ql-card ql-little">
+          <div class="ql-card-title"><span>⚖️ Little's law: L = λ · W</span></div>
+          <div class="ql-little-eq">
+            <div><span>L, people in the shop</span><b id="little-l">—</b><small>people (time average)</small></div>
+            <div class="ql-eq-sign">=</div>
+            <div><span>λ · W</span><b id="little-lw">—</b><small id="little-lw-unit">customers/min × min</small></div>
+          </div>
+          <p class="caption" id="little-detail"></p>
+          <p class="caption">Little's law holds for <b>any</b> queue: any arrivals, service times, number of
+            servers or line layout. Try to break it!</p>
+        </div>
+      </div>
+
+      <div class="ql-charts">
+        <div>
+          <h3>👥 People in the shop</h3>
+          <div id="chart-n" class="chart ql-chart"></div>
+        </div>
+        <div>
+          <h3>⏳ Average wait in line so far</h3>
+          <div id="chart-w" class="chart ql-chart"></div>
+        </div>
+      </div>
+      <p class="caption">The measured averages wander at first and settle near the theory as more customers go through.
+        Near ρ = 1 that takes a <b>very</b> long time: use ⏩ to jump ahead.</p>
+    </section>
+
+    <!-- ─────────────────────────── Explore ──────────────────────────── -->
+    <section id="mode-explore" role="tabpanel" hidden>
+      <div class="ql-head">
+        <h1>📈 Why lines explode near 100%</h1>
+        <p class="subtitle">The average wait in line, measured in service times, as the load ρ grows. Move the load
+          slider, then simulate real customers to see how well the formulas hold.</p>
+      </div>
+
+      <div class="ql-stage ql-explore">
+        <div class="ql-card">
+          <div id="chart-x" class="chart ql-chart-x"></div>
+          <label class="field ql-rho-field"><span>ρ load (utilization) <output id="x-rho-out"></output></span>
+            <input type="range" id="x-rho" min="0.05" max="0.98" step="0.01" value="0.8" /></label>
+          <div class="row">
+            <button id="x-sim" class="btn primary" type="button">🎲 Simulate 20,000 customers at this load</button>
+            <button id="x-clear" class="btn" type="button">Clear dots</button>
+            <label class="checkbox ql-inline"><input type="checkbox" id="x-log" />Log scale</label>
+          </div>
+        </div>
+        <div class="ql-side">
+          <div class="ql-card">
+            <div class="ql-card-title"><span>⚙️ Compare</span></div>
+            <label class="field"><span>c baristas <output id="x-c-out"></output></span>
+              <input type="range" id="x-c" min="1" max="6" step="1" value="1" /></label>
+            <fieldset class="segmented">
+              <legend>Arrivals</legend>
+              <label><input type="radio" name="x-arr" value="random" checked />🎲 Random</label>
+              <label><input type="radio" name="x-arr" value="steady" />〰️ Steady</label>
+              <label><input type="radio" name="x-arr" value="clock" />⏰ Clockwork</label>
+            </fieldset>
+            <fieldset class="segmented">
+              <legend>Service times</legend>
+              <label><input type="radio" name="x-svc" value="random" checked />🎲 Random</label>
+              <label><input type="radio" name="x-svc" value="steady" />〰️ Steady</label>
+              <label><input type="radio" name="x-svc" value="clock" />⏰ Clockwork</label>
+            </fieldset>
+            <label class="checkbox"><input type="checkbox" id="x-sep" checked />Also show a line per barista (customers pick at random)</label>
+          </div>
+          <div class="ql-card">
+            <div class="ql-card-title"><span>🔎 At this load</span></div>
+            <div id="x-readout"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ql-lessons">
+        <div class="ql-card">
+          <div class="ql-card-title"><span>🏒 1. The hockey stick</span></div>
+          <p>For one barista with random arrivals and service (M/M/1), the wait in line is
+            <b>ρ / (1 − ρ)</b> service times. Going from 80% to 90% load more than doubles it (4 → 9); from 90% to 95%
+            it doubles again (9 → 19).
+            A café that is "only" 95% busy has a long line.</p>
+        </div>
+        <div class="ql-card">
+          <div class="ql-card-title"><span>🎲 2. Variability makes lines</span></div>
+          <p>Kingman's approximation: <b>Wq ≈ ρ/(1 − ρ) · (c<sub>a</sub>² + c<sub>s</sub>²)/2 · service time</b>,
+            where c² measures how irregular arrivals and services are (random 1, steady ¼, clockwork 0). Make
+            both clockwork and the line disappears, even at 95% load.</p>
+        </div>
+        <div class="ql-card">
+          <div class="ql-card-title"><span>🤝 3. Pooling</span></div>
+          <p>With several baristas at the same load, one shared line beats a line per barista: nobody waits while
+            another barista sits idle. And more baristas at the same load means shorter waits
+            (<b>economies of scale</b>).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────────── Staffing ─────────────────────────── -->
+    <section id="mode-staffing" role="tabpanel" hidden>
+      <div id="st-setup" class="intro">
+        <h1>🎮 Staffing challenge: run the café for a day</h1>
+        <div class="intro-hero">
+          <div class="intro-hero-text">
+            <p class="intro-eyebrow">Capacity planning · wages vs waiting</p>
+            <p class="intro-lead">You manage a café from 7:00 to 15:00. Choose how many baristas work each hour.
+              Every barista costs a wage, and every minute a customer waits in line costs goodwill. Too few
+              baristas and the line explodes; too many and you pay people to stand around. Find the
+              <strong>cheapest day in total</strong>.</p>
+          </div>
+          <svg class="intro-art ql-art" viewBox="0 0 200 140" role="img" aria-label="A line of customers in front of a counter with two baristas">
+            <rect class="ql-art-floor" x="6" y="18" width="188" height="104" rx="12" />
+            <rect class="ql-art-counter" x="140" y="34" width="12" height="72" rx="3" />
+            <text x="170" y="58" font-size="20" text-anchor="middle">🧑‍🍳</text>
+            <text x="170" y="98" font-size="20" text-anchor="middle">🧑‍🍳</text>
+            <circle class="ql-art-c srv" cx="126" cy="52" r="7" /><circle class="ql-art-c srv" cx="126" cy="90" r="7" />
+            <circle class="ql-art-c w0" cx="104" cy="71" r="7" /><circle class="ql-art-c w0" cx="86" cy="71" r="7" />
+            <circle class="ql-art-c w1" cx="68" cy="71" r="7" /><circle class="ql-art-c w1" cx="50" cy="71" r="7" />
+            <circle class="ql-art-c w2" cx="32" cy="71" r="7" />
+          </svg>
+        </div>
+
+        <h3 class="intro-heading">The rules</h3>
+        <ol class="intro-steps">
+          <li><span class="step-icon" aria-hidden="true">📅</span><strong>Demand varies</strong>
+            <span>The game code sets the expected customers per hour, with a breakfast and a lunch rush. Arrivals are random.</span></li>
+          <li><span class="step-icon" aria-hidden="true">🧑‍🍳</span><strong>Plan the shifts</strong>
+            <span>Pick 1 to 8 baristas per hour. Each costs <b>$18 per hour</b>.</span></li>
+          <li><span class="step-icon" aria-hidden="true">⏳</span><strong>Waiting costs</strong>
+            <span>Each minute a customer waits in line costs <b>$0.30</b>. Customers in line at closing are still served.</span></li>
+          <li><span class="step-icon" aria-hidden="true">☕</span><strong>Open the café</strong>
+            <span>The day is simulated with <b>the same customers</b> for every plan, so you can compare plans fairly.</span></li>
+        </ol>
+
+        <h3 class="intro-heading">Start</h3>
+        <div class="tool-card ql-start">
+          <label class="field"><span>🔑 Game code (optional)</span>
+            <input type="text" id="st-code" maxlength="12" placeholder="Leave blank for a random code" autocomplete="off" spellcheck="false" /></label>
+          <p class="mode-desc">Same code, same day and same customers: share a code so the whole class plans the same day.</p>
+          <button id="st-start" class="btn primary" type="button">▶ Start</button>
+        </div>
+      </div>
+
+      <div id="st-game" hidden>
+        <div class="ql-st-head">
+          <div>
+            <h2>📅 Plan the day</h2>
+            <p class="ql-st-sub">Game code <b id="st-code-out"></b> <button id="st-copy" class="linklike" type="button">📋 copy</button></p>
+          </div>
+          <div class="ql-kpis">
+            <div class="kpi"><span>Mean service time</span><b id="st-svc"></b></div>
+            <div class="kpi"><span>One barista serves</span><b id="st-mu"></b></div>
+            <div class="kpi"><span>Wage</span><b>$18 / h</b></div>
+            <div class="kpi"><span>Waiting</span><b>$0.30 / min</b></div>
+            <button id="st-new" class="btn small" type="button">↺ New game</button>
+          </div>
+        </div>
+
+        <div class="ql-stage ql-st-stage">
+          <div class="ql-card">
+            <div class="ql-card-title"><span>📈 Demand vs your capacity</span></div>
+            <div id="chart-demand" class="chart ql-chart"></div>
+            <p class="caption">Capacity = baristas × customers one barista serves per hour. Where the bar is above
+              the line, ρ ≥ 1: customers arrive faster than you can serve them.</p>
+          </div>
+          <div class="ql-card">
+            <div class="ql-card-title"><span>🧑‍🍳 Your plan</span>
+              <label class="switch ql-switch" title="Show the M/M/c steady-state forecast for each hour"><input type="checkbox" id="st-forecast" /><span class="switch-track"></span>🔮 Forecast</label></div>
+            <div class="table-wrap"><table id="st-plan" class="ql-plan"></table></div>
+            <button id="st-run" class="btn primary block" type="button">☕ Open the café</button>
+          </div>
+        </div>
+
+        <div id="st-results" hidden>
+          <h2 id="st-res-title">📋 How the day went</h2>
+          <div id="st-verdict"></div>
+          <div class="metrics" id="st-metrics"></div>
+          <div class="ql-charts ql-st-charts">
+            <div>
+              <h3>👥 People waiting in line</h3>
+              <div id="chart-day" class="chart ql-chart"></div>
+            </div>
+            <div>
+              <h3>🧾 Hour by hour</h3>
+              <div class="table-wrap"><table id="st-hours"></table></div>
+            </div>
+          </div>
+          <h3>🗂️ Your attempts</h3>
+          <div class="table-wrap"><table id="st-attempts"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel concepts ql-concepts" aria-labelledby="concepts-title">
+      <h3 id="concepts-title">📘 Concepts</h3>
+      <p class="caption">Click any topic for a quick explanation.</p>
+      <div id="concepts"></div>
+    </section>
+  </main>
+  <div id="toast-stack" aria-live="polite"></div>
+  <noscript><p class="alert error">This page needs JavaScript to run.</p></noscript>
+</body>
+</html>
